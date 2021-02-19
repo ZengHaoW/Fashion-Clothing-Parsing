@@ -6,7 +6,6 @@ import read_10k_data as fashion_parsing
 import read_CFPD_data as ClothingParsing
 import read_LIP_data as HumanParsing
 import TensorflowUtils as Utils
-
 import numpy as np
 import tensorflow as tf
 
@@ -15,8 +14,8 @@ import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-DATA_SET = "10k"
-# DATA_SET = "CFPD"
+# DATA_SET = "10k"
+DATA_SET = "CFPD"
 # DATA_SET = "LIP"
 
 FLAGS = tf.flags.FLAGS
@@ -33,10 +32,10 @@ if DATA_SET == "10k":
         "data_dir", "D:/Datasets/Dressup10k/", "path to dataset")
 
 if DATA_SET == "CFPD":
-    tf.flags.DEFINE_integer("batch_size", "110", "batch size for training")
+    tf.flags.DEFINE_integer("batch_size", "32", "batch size for training")
     tf.flags.DEFINE_integer(
         "training_epochs",
-        "300",
+        "20",
         "number of epochs for training")
     tf.flags.DEFINE_string("logs_dir", "logs/FCN_CFPD/",
                            "path to logs directory")
@@ -44,10 +43,10 @@ if DATA_SET == "CFPD":
         "data_dir", "D:/Datasets/CFPD/", "path to dataset")
 
 if DATA_SET == "LIP":
-    tf.flags.DEFINE_integer("batch_size", "112", "batch size for training")
+    tf.flags.DEFINE_integer("batch_size", "32", "batch size for training")
     tf.flags.DEFINE_integer(
         "training_epochs",
-        "30",
+        "10",
         "number of epochs for training")
     tf.flags.DEFINE_string("logs_dir", "logs/FCN_LIP/",
                            "path to logs directory")
@@ -95,7 +94,7 @@ def inference(image, keep_prob):
     #    model_data is dictionary for variables from matlab mat file
     print("setting up vgg initialized conv layers ...")
     model_data = Utils.get_model_data(FLAGS.model_dir, MODEL_URL)
-
+    
     mean = model_data['normalization'][0][0][0]
     mean_pixel = np.mean(mean, axis=(0, 1))
 

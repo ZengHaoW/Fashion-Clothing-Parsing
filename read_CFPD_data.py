@@ -25,42 +25,42 @@ def read_dataset(data_dir):
     training_records = []
     traindir = "D:/Datasets/CFPD/trainimages/"
     print("## Training dir:", traindir)
-    for filename in glob.glob(traindir + '*.jpg'):  # assuming jpg files
+    for filename in glob.glob(traindir + '*.png'):  # assuming jpg files
         record = {'image': None, 'annotation': None, 'filename': None}
         record['image'] = filename
         record['filename'] = filename
-        record['annotation'] = filename.replace(
-            "jpg", "png")
-        record['label'] = filename.replace(
-            "jpg", "png")
+        record['annotation'] = filename#.replace(
+         #   "jpg", "png")
+        record['label'] = filename#.replace(
+         #   "jpg", "png")
         training_records.append(record)
 
     validation_records = []
     validationdir = "D:/Datasets/CFPD/valimages/"
     print("## Validation dir:", validationdir)
     for filename in glob.glob(
-            validationdir + '*.jpg'):  # assuming jpg files
+            validationdir + '*.png'):  # assuming jpg files
         record = {'image': None, 'annotation': None, 'filename': None}
         record['image'] = filename
         record['filename'] = filename
-        record['annotation'] = filename.replace(
-            "jpg", "png")
-        record['label'] = filename.replace(
-            "jpg", "png")
+        record['annotation'] = filename#.replace(
+        #    "jpg", "png")
+        record['label'] = filename#.replace(
+       #     "jpg", "png")
         validation_records.append(record)
 
     testing_records = []
     testdir = "D:/Datasets/CFPD/testimages/"
     print("## Testing dir:", testdir)
     for filename in glob.glob(
-            testdir + '*.jpg'):  # assuming jpg files
+            testdir + '*.png'):  # assuming jpg files
         record = {'image': None, 'annotation': None, 'filename': None}
         record['image'] = filename
         record['filename'] = filename
-        record['annotation'] = filename.replace(
-            "jpg", "png")
-        record['label'] = filename.replace(
-            "jpg", "png")
+        record['annotation'] = filename#.replace(
+        #    "jpg", "png")
+        record['label'] = filename#.replace(
+          #  "jpg", "png")
         testing_records.append(record)
 
     return training_records, validation_records, testing_records
@@ -220,7 +220,7 @@ def create_image_lists(image_dir):
     for directory in directories:
         file_list = []
         image_list[directory] = []
-        file_glob = os.path.join(image_dir, "images", directory, '*.' + 'jpg')
+        file_glob = os.path.join(image_dir, "images", directory, '*.' + 'png')      
         file_list.extend(glob.glob(file_glob))
 
         if not file_list:
