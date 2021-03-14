@@ -516,7 +516,6 @@ def calculate_iou(gtimage, predimage, num_classes):
 
 def calculate_confusion_matrix(gt_image, predicted_image, num_classes):
     cross_mat = []
-
     for i in range(num_classes):
         cross_mat.append([0] * num_classes)
     # print(cross_mat)

@@ -213,6 +213,10 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
 
     # Start decoder training
     min_val_loss = 100
+    train_acc = list()
+    val_acc = list()
+    train_mean_IoU = list()
+    val_mean_IoU = list()
     valid = list()
     step = list()
     lo = list()
@@ -264,9 +268,9 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
                     np.uint8), 23)
                 cross_mats.append(crossMat)
             total_cm = np.sum(cross_mats, axis=0)
-            pixel_accuracy_, mean_accuracy, meanIoU, meanFrqWIoU = EvalMetrics.calculate_eval_metrics_from_confusion_matrix2(total_cm, 23)
-            print("Step: %d, Train_loss:%g, mean_accuracy:%g, meanIoU:%g" % (itr, train_loss, mean_accuracy, meanIoU))
-        if itr % display_step == 0 and itr != 0:
+            pixel_accuracy_, tra_acc, tra_IoU, meanFrqWIoU = EvalMetrics.calculate_eval_metrics_from_confusion_matrix2(total_cm, 23)
+            print("Step: %d, Train_loss:%g, Train_mean_accuracy:%g, Train_meanIoU:%g" % (itr, train_loss, tra_acc, tra_IoU))
+        if itr % display_step == 0:
             valid_images, valid_annotations = validation_dataset_reader.next_batch(
                 FLAGS.batch_size)
             valid_loss, pre = sess.run(
@@ -279,25 +283,23 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
             pre = np.squeeze(pre)
             valid_annotations = np.squeeze(valid_annotations)
             for itr3 in range(FLAGS.batch_size):
-                pre = np.squeeze(pre)
-                valid_annotations = np.squeeze(valid_annotations)
+
                 crossMat = EvalMetrics.calculate_confusion_matrix(
-                train_annotations[itr2].astype(
-                    np.uint8), predict[itr2].astype(
+                valid_annotations[itr2].astype(
+                    np.uint8), pre[itr2].astype(
                     np.uint8), 23)
                 cross_mats2.append(crossMat)
             total_cm = np.sum(cross_mats2, axis=0)
-            pixel_accuracy_2, mean_accuracy2, meanIoU2, meanFrqWIoU2 = EvalMetrics.calculate_eval_metrics_from_confusion_matrix2(total_cm, 23)
+            pixel_accuracy_2, v_acc, v_IoU, meanFrqWIoU2 = EvalMetrics.calculate_eval_metrics_from_confusion_matrix2(total_cm, 23)
             now = time.time()
             print(
-                "It has been trained for %.2f seconds.---> Validation_loss: %g, mean_accuracy:%g, meanIoU:%g" %
-                (now - start, valid_loss, mean_accuracy2, meanIoU2))
+                "It has been trained for %.2f seconds.---> Validation_loss: %g, Validation_mean_accuracy:%g, Validation_meanIoU:%g" %
+                (now - start, valid_loss, v_acc, v_IoU))
             print()
             global_step = sess.run(net['global_step'])
-            if (valid_loss / train_loss) > 2:
+            if (valid_loss / train_loss) > 3 or (tra_IoU / v_IoU) > 5:
                 if_end = 1
-            if valid_loss < min_val_loss:
-                min_val_loss = valid_loss
+            if v_IoU > max(val_mean_IoU):
                 saver.save(
                     sess,
                     FLAGS.logs_dir +
@@ -306,8 +308,12 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
             lo.append(train_loss)
             valid.append(valid_loss)
             step.append(itr)
+            train_acc.append(tra_acc)
+            train_mean_IoU.append(tra_IoU)
+            val_acc.append(v_acc)
+            val_mean_IoU.append((v_IoU))
             # print("valid", valid, "step", step)
-
+            '''
             try:
                 plt.clf()
                 plt.ylim(0, 1)
@@ -329,21 +335,46 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
                 plt.savefig(FLAGS.logs_dir + "validation_loss.jpg")
             except Exception as err:
                 print(err)
-
+            '''
             try:
                 plt.clf()
-                plt.ylim(0, 1)
+                plt.ylim(0, 1.5)
                 plt.plot(np.array(step), np.array(lo))
                 plt.plot(np.array(step), np.array(valid))
                 plt.ylabel("Loss")
                 plt.xlabel("Step")
-                plt.title('Result')
+                plt.title('Training Loss + Validation Loss')
                 plt.legend(['Training Loss', 'Validation Loss'],
                            loc='upper right')
-                plt.savefig(FLAGS.logs_dir + "merged_loss.jpg")
+                plt.savefig(FLAGS.logs_dir + "Training Loss + Validation Loss.jpg")
             except Exception as err:
                 print(err)
-
+            try:
+                plt.clf()
+                plt.ylim(0, 1)
+                plt.plot(np.array(step), np.array(train_acc))
+                plt.plot(np.array(step), np.array(val_acc))
+                plt.ylabel("acc")
+                plt.xlabel("Step")
+                plt.title('train_acc + val_acc')
+                plt.legend(['train_acc', 'val_acc'],
+                           loc='upper right')
+                plt.savefig(FLAGS.logs_dir + "train_acc + val_acc.jpg")
+            except Exception as err:
+                print(err)
+            try:
+                plt.clf()
+                plt.ylim(0, 1)
+                plt.plot(np.array(step), np.array(train_mean_IoU))
+                plt.plot(np.array(step), np.array(val_mean_IoU))
+                plt.ylabel("IoU")
+                plt.xlabel("Step")
+                plt.title('train_mean_IoU + val_mean_IoU')
+                plt.legend(['train_mean_IoU', 'val_acc'],
+                           loc='upper right')
+                plt.savefig(FLAGS.logs_dir + "train_mean_IoU + val_mean_IoU.jpg")
+            except Exception as err:
+                print(err)
             mode_view(sess, FLAGS, "./test/VisImage/", train_dataset_reader, logs_dataset_reader,
                       logs_records,
                       pred_annotation, image, annotation, keep_probability, logits, 23)
@@ -355,7 +386,7 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
         np.savetxt(
             FLAGS.logs_dir +
             "training_steps.csv",
-            np.c_[step, lo, valid],
+            np.c_[step, lo, valid, train_acc, val_acc, train_mean_IoU, val_mean_IoU],
             fmt='%4f',
             delimiter=',')
     except Exception as err:
