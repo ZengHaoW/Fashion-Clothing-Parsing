@@ -14,9 +14,9 @@ import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-DATA_SET = "10k"
+# DATA_SET = "10k"
 # DATA_SET = "CFPD"
-# DATA_SET = "LIP"
+DATA_SET = "LIP"
 
 FLAGS = tf.flags.FLAGS
 
@@ -43,10 +43,10 @@ if DATA_SET == "CFPD":
         "data_dir", "D:/Datasets/CFPD/", "path to dataset")
 
 if DATA_SET == "LIP":
-    tf.flags.DEFINE_integer("batch_size", "40", "batch size for training")
+    tf.flags.DEFINE_integer("batch_size", "4", "batch size for training")
     tf.flags.DEFINE_integer(
         "training_epochs",
-        "30",
+        "10",
         "number of epochs for training")
     tf.flags.DEFINE_string("logs_dir", "logs/UNet_LIP/",
                            "path to logs directory")

@@ -22,7 +22,7 @@ def read_dataset(data_dir):
     # 'filename': filename}
     training_records = []
 
-    testdir = "D:/Datasets/LIP/training/images/"
+    testdir = "C:/Users/zx08x/Desktop/new/LIP/training/images/"
 
     print("## Training dir:", testdir)
     for filename in glob.glob(testdir + '*.jpg'):  # assuming jpg files
@@ -36,7 +36,7 @@ def read_dataset(data_dir):
 
     validation_records = []
 
-    validationdir = "D:/Datasets/LIP/validation/images/"
+    validationdir = "C:/Users/zx08x/Desktop/new/LIP/validation/images/"
 
     print("## Validation dir:", validationdir)
     for filename in glob.glob(

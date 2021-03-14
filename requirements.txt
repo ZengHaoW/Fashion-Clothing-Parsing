@@ -1,12 +1,12 @@
-tensorflow-gpu
-numpy
-scipy
+#tensorflow-cpu == 1.15
 pillow
 tqdm
 h5py
 pandas
 matplotlib
-pydensecrf
+#pydensecrf             conda install -c conda-forge pydensecrf
 opencv-python
 sklearn
 scikit-image
+numpy == 1.16
+scipy == 1.1.0

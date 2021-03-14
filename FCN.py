@@ -6,6 +6,7 @@ import read_10k_data as fashion_parsing
 import read_CFPD_data as ClothingParsing
 import read_LIP_data as HumanParsing
 import TensorflowUtils as Utils
+
 import numpy as np
 import tensorflow as tf
 
@@ -14,48 +15,37 @@ import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-# DATA_SET = "10k"
+
 DATA_SET = "CFPD"
 # DATA_SET = "LIP"
 
 FLAGS = tf.flags.FLAGS
 
-if DATA_SET == "10k":
-    tf.flags.DEFINE_integer("batch_size", "2", "batch size for training")
-    tf.flags.DEFINE_integer(
-        "training_epochs",
-        "50",
-        "number of epochs for training")
-    tf.flags.DEFINE_string("logs_dir", "logs/FCN_10k/",
-                           "path to logs directory")
-    tf.flags.DEFINE_string(
-        "data_dir", "D:/Datasets/Dressup10k/", "path to dataset")
-
 if DATA_SET == "CFPD":
-    tf.flags.DEFINE_integer("batch_size", "32", "batch size for training")
+    tf.flags.DEFINE_integer("batch_size", "31", "batch size for training")
     tf.flags.DEFINE_integer(
         "training_epochs",
-        "20",
+        "25",
         "number of epochs for training")
     tf.flags.DEFINE_string("logs_dir", "logs/FCN_CFPD/",
                            "path to logs directory")
     tf.flags.DEFINE_string(
-        "data_dir", "D:/Datasets/CFPD/", "path to dataset")
+        "data_dir", "C:/CFPD/", "path to dataset")
 
 if DATA_SET == "LIP":
-    tf.flags.DEFINE_integer("batch_size", "32", "batch size for training")
+    tf.flags.DEFINE_integer("batch_size", "16", "batch size for training")
     tf.flags.DEFINE_integer(
         "training_epochs",
-        "10",
+        "50",
         "number of epochs for training")
     tf.flags.DEFINE_string("logs_dir", "logs/FCN_LIP/",
                            "path to logs directory")
     tf.flags.DEFINE_string(
-        "data_dir", "D:/Datasets/LIP/", "path to dataset")
+        "data_dir", "C:/Users/zx08x/Desktop/new/LIP/", "path to dataset")
 
 tf.flags.DEFINE_float(
     "learning_rate",
-    "1e-4",
+    "1e-5",
     "Learning rate for Adam Optimizer")
 tf.flags.DEFINE_string("model_dir", "Model_zoo/", "Path to vgg model mat")
 tf.flags.DEFINE_bool('debug', "False", "Debug mode: True/ False")
@@ -83,6 +73,7 @@ VIS_DIR = FLAGS.logs_dir + "VisImage/"
 """
 
 
+# 预测流程，image是输入图像，keep_prob dropout比例
 def inference(image, keep_prob):
     """
     Semantic segmentation network definition
@@ -94,20 +85,20 @@ def inference(image, keep_prob):
     #    model_data is dictionary for variables from matlab mat file
     print("setting up vgg initialized conv layers ...")
     model_data = Utils.get_model_data(FLAGS.model_dir, MODEL_URL)
-    
-    mean = model_data['normalization'][0][0][0]
-    mean_pixel = np.mean(mean, axis=(0, 1))
 
-    weights = np.squeeze(model_data['layers'])
+    mean = model_data['normalization'][0][0][0]                         #通过字典获取mean值,vgg模型参数里有normaliza这个字典，三个0用来去虚维找到mean 
+    mean_pixel = np.mean(mean, axis=(0, 1))             
 
-    processed_image = Utils.process_image(image, mean_pixel)
+    weights = np.squeeze(model_data['layers'])                          # 压缩VGG网络中参数，把维度是1的维度去掉 剩下的就是权重
+
+    processed_image = Utils.process_image(image, mean_pixel)            #预处理函数 return image - mean_pixel # 图像减平均值实现标准化
 
     # 2. construct model graph
-    with tf.variable_scope("inference"):
+    with tf.variable_scope("inference"):            # tf.variable_scope() 主要结合 tf.get_variable() 来使用，实现变量共享。inference相当于变量名前缀 
         # 2.1 VGG
-        image_net = fd.vgg_net(weights, processed_image)
-        conv_final_layer = image_net["conv5_3"]
-        #
+        image_net = fd.vgg_net(weights, processed_image)        # 传入权重参数和预测图像，获得所有层输出结果
+        conv_final_layer = image_net["conv5_3"]                 # 获得输出结果
+        
         pool5 = Utils.max_pool_2x2(conv_final_layer)
 
         W6 = Utils.weight_variable([7, 7, 512, 4096], name="W6")
@@ -116,7 +107,7 @@ def inference(image, keep_prob):
         relu6 = tf.nn.relu(conv6, name="relu6")
         if FLAGS.debug:
             Utils.add_activation_summary(relu6)
-        relu_dropout6 = tf.nn.dropout(relu6, keep_prob=keep_prob)
+        relu_dropout6 = tf.nn.dropout(relu6, keep_prob=keep_prob)           #防止或减轻过拟合而使用的函数，它一般用在全连接层。keep_prob: 设置神经元被选中的概率
 
         W7 = Utils.weight_variable([1, 1, 4096, 4096], name="W7")
         b7 = Utils.bias_variable([4096], name="b7")
@@ -158,7 +149,11 @@ def inference(image, keep_prob):
         b_t3 = Utils.bias_variable([NUM_OF_CLASSES], name="b_t3")
         conv_t3 = Utils.conv2d_transpose_strided(
             fuse_2, W_t3, b_t3, output_shape=deconv_shape3, stride=8)
-
+                   # 目前conv_t3的形式为size为和原始图像相同的size，通道数与分类数相同         
+                   # # 这句我的理解是对于每个像素位置，根据第3维度（通道数）通过argmax能计算出这个像素点属于哪个分类         
+                   # # 也就是对于每个像素而言，NUM_OF_CLASSESS个通道中哪个数值最大，这个像素就属于哪个分类         
+                   # # 每个像素点有21个值，哪个值最大就属于那一类        
+                   # # 返回一张图，每一个点对于其来别信息shape=[b,h,w]
         # prob = tf.nn.softmax(conv_t3, axis =3)
         annotation_pred = tf.argmax(conv_t3, dimension=3, name="prediction")
 
@@ -184,42 +179,18 @@ def train(loss_val, var_list, global_step):
 def main(argv=None):
     # 1. input placeholders
     keep_probability = tf.placeholder(tf.float32, name="keep_probability")
-    image = tf.placeholder(
-        tf.float32,
-        shape=(
-            None,
-            IMAGE_SIZE,
-            IMAGE_SIZE,
-            3),
-        name="input_image")
-    annotation = tf.placeholder(
-        tf.int32,
-        shape=(
-            None,
-            IMAGE_SIZE,
-            IMAGE_SIZE,
-            1),
-        name="annotation")
+    image = tf.placeholder(tf.float32, shape = (None, IMAGE_SIZE, IMAGE_SIZE, 3), name = "input_image")
+    annotation = tf.placeholder(tf.int32, shape=(None, IMAGE_SIZE, IMAGE_SIZE, 1), name="annotation")
     # global_step = tf.Variable(0, trainable=False, name='global_step')
 
     # 2. construct inference network
+     # 预测一个batch图像  获得预测图[b,h,w,c=1]  结果特征图[b,h,w,c=151]
     pred_annotation, logits, net = inference(image, keep_probability)
     tf.summary.image("input_image", image, max_outputs=3)
-    tf.summary.image(
-        "ground_truth",
-        tf.cast(
-            annotation,
-            tf.uint8),
-        max_outputs=3)
+    tf.summary.image("ground_truth", tf.cast(annotation, tf.uint8), max_outputs=3)
+    tf.summary.image("pred_annotation", tf.cast(pred_annotation, tf.uint8), max_outputs=3)
 
-    tf.summary.image(
-        "pred_annotation",
-        tf.cast(
-            pred_annotation,
-            tf.uint8),
-        max_outputs=3)
-
-    # 3. loss measure
+    # 3. loss measure       # 空间交叉熵损失函数[b,h,w,c=151]  和labels[b,h,w]    每一张图分别对比
     loss = tf.reduce_mean(
         (tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=logits,
@@ -242,19 +213,18 @@ def main(argv=None):
     print("Setting up image reader from ", FLAGS.data_dir, "...")
     print("data dir:", FLAGS.data_dir)
 
-    train_records, valid_records = fashion_parsing.read_dataset(FLAGS.data_dir)
-    test_records = None
+    #train_records, valid_records = fashion_parsing.read_dataset(FLAGS.data_dir)
+    #test_records = None
     if DATA_SET == "CFPD":
-        train_records, valid_records, test_records = ClothingParsing.read_dataset(
+        train_records, valid_records, test_records, logs_records = ClothingParsing.read_dataset(
             FLAGS.data_dir)
-        print("test_records length :", len(test_records))
     if DATA_SET == "LIP":
         train_records, valid_records = HumanParsing.read_dataset(
             FLAGS.data_dir)
-
+    print("test_records length :", len(test_records))
     print("train_records length :", len(train_records))
     print("valid_records length :", len(valid_records))
-
+    print("logs_records length :", len(logs_records))
     print("Setting up dataset reader")
     train_dataset_reader = None
     validation_dataset_reader = None
@@ -262,19 +232,16 @@ def main(argv=None):
     image_options = {'resize': True, 'resize_size': IMAGE_SIZE}
 
     if FLAGS.mode == 'train':
-        train_dataset_reader = DataSetReader.BatchDatset(
-            train_records, image_options)
-        validation_dataset_reader = DataSetReader.BatchDatset(
-            valid_records, image_options)
-        if DATA_SET == "CFPD":
-            test_dataset_reader = DataSetReader.BatchDatset(
-                test_records, image_options)
+        train_dataset_reader = DataSetReader.BatchDatset("train", train_records, image_options)
+        validation_dataset_reader = DataSetReader.BatchDatset("val", valid_records, image_options)
+        logs_dataset_reader = DataSetReader.BatchDatset("logs", logs_records, image_options)
+
     if FLAGS.mode == 'visualize':
         validation_dataset_reader = DataSetReader.BatchDatset(
             valid_records, image_options)
     if FLAGS.mode == 'test' or FLAGS.mode == 'crftest' or FLAGS.mode == 'predonly' or FLAGS.mode == "fulltest":
         if DATA_SET == "CFPD":
-            test_dataset_reader = DataSetReader.BatchDatset(
+            test_dataset_reader = DataSetReader.BatchDatset("test",
                 test_records, image_options)
         else:
             test_dataset_reader = DataSetReader.BatchDatset(
@@ -284,7 +251,7 @@ def main(argv=None):
     sess = tf.Session()
 
     print("Setting up Saver...")
-    saver = tf.train.Saver()
+    saver = tf.train.Saver(max_to_keep=4)
     summary_writer = tf.summary.FileWriter(FLAGS.logs_dir, sess.graph)
 
     # 5. parameter setup
@@ -301,17 +268,10 @@ def main(argv=None):
     # 6. train-mode
     if FLAGS.mode == "train":
 
-        fd.mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader, train_records, pred_annotation,
+        fd.mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader, logs_dataset_reader, train_records, logs_records,pred_annotation,
                       image, annotation, keep_probability, logits, train_op, loss, summary_op, summary_writer, saver,
                       DISPLAY_STEP)
 
-    # test-random-validation-data mode
-    elif FLAGS.mode == "visualize":
-
-        fd.mode_visualize(sess, FLAGS, VIS_DIR, validation_dataset_reader,
-                          pred_annotation, image, annotation, keep_probability, NUM_OF_CLASSES)
-
-    # test-full-validation-dataset mode
     elif FLAGS.mode == "test":  # heejune added
 
         fd.mode_new_test(sess, FLAGS, TEST_DIR, test_dataset_reader, test_records,
@@ -320,6 +280,13 @@ def main(argv=None):
         # fd.mode_test(sess, FLAGS, TEST_DIR, test_dataset_reader, test_records,
         # pred_annotation, image, annotation, keep_probability, logits, NUM_OF_CLASSES)
 
+    elif FLAGS.mode == "view":
+        train_dataset_reader = DataSetReader.BatchDatset("train", train_records, image_options)
+        logs_dataset_reader = DataSetReader.BatchDatset("logs", logs_records, image_options)
+        fd.mode_view(sess, FLAGS, "./VisImage/", train_dataset_reader, logs_dataset_reader,
+                      logs_records,
+                      pred_annotation, image, annotation, keep_probability, logits, 23)
+    '''
     elif FLAGS.mode == "crftest":
 
         fd.mode_predonly(sess, FLAGS, TEST_DIR, test_dataset_reader, test_records,
@@ -334,7 +301,7 @@ def main(argv=None):
 
         fd.mode_full_test(sess, FLAGS, TEST_DIR, test_dataset_reader, test_records,
                           pred_annotation, image, annotation, keep_probability, logits, NUM_OF_CLASSES)
-
+    '''
     sess.close()
 
 

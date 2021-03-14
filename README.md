@@ -5,13 +5,16 @@ This is the source code of our project for Fashion Clothing Parsing. (EMCOM Lab,
 3. Improved networks based on U-Net
 
 The implementation is largely based on the reference code provided by the authors of the paper [link](https://github.com/shelhamer/fcn.berkeleyvision.org).
-1. [Prerequisites](#prerequisites)
-2. [Dataset](#dataset)
-3. [Training](#training)
-4. [Testing](#testing)
-5. [Visualizing](#visualizing)
-6. [CRF](#crf)
-7. [BFSCORE](#bfscore)
+- [Fashion parsing models in TensorFlow](#fashion-parsing-models-in-tensorflow)
+  - [Directory Structure](#directory-structure)
+  - [Prerequisites](#prerequisites)
+  - [Dataset](#dataset)
+  - [Training](#training)
+  - [Testing](#testing)
+  - [Visualizing](#visualizing)
+  - [CRF](#crf)
+  - [BFSCORE](#bfscore)
+
 
 
 ## Directory Structure

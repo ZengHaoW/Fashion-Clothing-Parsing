@@ -22,48 +22,61 @@ def read_dataset(data_dir):
     # sample record: {'image': f, 'annotation': annotation_file,
     # 'filename': filename}
 
-    training_records = []
-    traindir = "D:/Datasets/CFPD/trainimages/"
-    print("## Training dir:", traindir)
-    for filename in glob.glob(traindir + '*.png'):  # assuming jpg files
+    logs_records = []
+    logsdir = "test/"
+    print("## logs dir:", logsdir)
+    for filename in glob.glob(logsdir + '*.jpg'):  # assuming jpg files
         record = {'image': None, 'annotation': None, 'filename': None}
         record['image'] = filename
         record['filename'] = filename
-        record['annotation'] = filename#.replace(
-         #   "jpg", "png")
-        record['label'] = filename#.replace(
-         #   "jpg", "png")
+        record['annotation'] = filename.replace(
+            "jpg", "png")
+        # record['label'] = filename.replace(
+        #   "jpg", "png")
+        logs_records.append(record)
+
+    training_records = []
+    traindir = "C:/CFPD/trainimages/"
+    print("## Training dir:", traindir)
+    for filename in glob.glob(traindir + '*.jpg'):  # assuming jpg files
+        record = {'image': None, 'annotation': None, 'filename': None}
+        record['image'] = filename
+        record['filename'] = filename
+        record['annotation'] = filename.replace(
+            "jpg", "png")
+        record['label'] = filename.replace(
+            "jpg", "png")
         training_records.append(record)
 
     validation_records = []
-    validationdir = "D:/Datasets/CFPD/valimages/"
+    validationdir = "C:/CFPD/valimages/"
     print("## Validation dir:", validationdir)
     for filename in glob.glob(
-            validationdir + '*.png'):  # assuming jpg files
+            validationdir + '*.jpg'):  # assuming jpg files
         record = {'image': None, 'annotation': None, 'filename': None}
         record['image'] = filename
         record['filename'] = filename
-        record['annotation'] = filename#.replace(
-        #    "jpg", "png")
-        record['label'] = filename#.replace(
-       #     "jpg", "png")
+        record['annotation'] = filename.replace(
+            "jpg", "png")
+        record['label'] = filename.replace(
+            "jpg", "png")
         validation_records.append(record)
 
     testing_records = []
-    testdir = "D:/Datasets/CFPD/testimages/"
+    testdir = "C:/CFPD/testimages/"
     print("## Testing dir:", testdir)
     for filename in glob.glob(
-            testdir + '*.png'):  # assuming jpg files
+            testdir + '*.jpg'):  # assuming jpg files
         record = {'image': None, 'annotation': None, 'filename': None}
         record['image'] = filename
         record['filename'] = filename
-        record['annotation'] = filename#.replace(
-        #    "jpg", "png")
-        record['label'] = filename#.replace(
-          #  "jpg", "png")
+        record['annotation'] = filename.replace(
+            "jpg", "png")
+        record['label'] = filename.replace(
+            "jpg", "png")
         testing_records.append(record)
 
-    return training_records, validation_records, testing_records
+    return training_records, validation_records, testing_records, logs_records
 
 
 def read_dataset_from_mat_file(data_dir):
@@ -74,7 +87,7 @@ def read_dataset_from_mat_file(data_dir):
     testing_records = []
     all_records = []
 
-    data_dir = "D:/Datasets/CFPD/"
+    data_dir = "C:/CFPD/"
     image_dir = data_dir + "image/"
     annotation_file_path = data_dir + "fashion_parsing_data.mat"
 
@@ -111,7 +124,7 @@ def read_dataset_from_mat_file(data_dir):
 
     return training_records, validation_records, testing_records
 
-
+'''
 def read_mat(annotation_file_path):
     fashion_dataset = []
 
@@ -134,7 +147,7 @@ def hdf5_to_list(data):
     x = data[:]
     # x = x.tolist()
     return x
-
+'''
 
 def convert_mat_to_dict(mat_file='fashion_parsing_data.mat'):
     f = h5py.File(mat_file, 'r')
@@ -209,7 +222,7 @@ def convert_mat_to_dict(mat_file='fashion_parsing_data.mat'):
     create image filename list for training and validation data (input and annotation)
 """
 
-
+'''
 def create_image_lists(image_dir):
     if not gfile.Exists(image_dir):
         print("Image directory '" + image_dir + "' not found.")
@@ -220,7 +233,7 @@ def create_image_lists(image_dir):
     for directory in directories:
         file_list = []
         image_list[directory] = []
-        file_glob = os.path.join(image_dir, "images", directory, '*.' + 'png')      
+        file_glob = os.path.join(image_dir, "images", directory, '*.' + 'jpg')
         file_list.extend(glob.glob(file_glob))
 
         if not file_list:
@@ -247,3 +260,4 @@ def create_image_lists(image_dir):
         print('No. of %s files: %d' % (directory, no_of_images))
 
     return image_list
+'''

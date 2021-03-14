@@ -48,9 +48,9 @@ IMG_MEAN = np.array((104.00698793, 116.66876762,
 
 def init_path():
 
-    val_anno_dir = 'E:/Dataset/LIP/output/parsing/val/'
-    val_id_list = 'E:/Dataset/LIP/list/val_id.txt'
-    val_img_dir = 'E:/Dataset/LIP/validation/images/'
+    val_anno_dir = 'C:/Users/zx08x/Desktop/new/LIP/output/parsing/val/'
+    val_id_list = 'C:/Users/zx08x/Desktop/new/LIP/list/val_id.txt'
+    val_img_dir = 'C:/Users/zx08x/Desktop/new/LIP/validation/images/'
 
     val_img_paths = []
     val_anno_paths = []

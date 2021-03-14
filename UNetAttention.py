@@ -14,9 +14,9 @@ import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-DATA_SET = "10k"
+#DATA_SET = "10k"
 # DATA_SET = "CFPD"
-# DATA_SET = "LIP"
+DATA_SET = "LIP"
 
 FLAGS = tf.flags.FLAGS
 
@@ -51,7 +51,7 @@ if DATA_SET == "LIP":
     tf.flags.DEFINE_string("logs_dir", "logs/UNet_LIP/",
                            "path to logs directory")
     tf.flags.DEFINE_string(
-        "data_dir", "D:/Datasets/LIP/", "path to dataset")
+        "data_dir", "C:/Users/zx08x/Desktop/l/", "path to dataset")
 
 tf.flags.DEFINE_float(
     "learning_rate",

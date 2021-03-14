@@ -311,6 +311,85 @@ def calculate_eval_metrics_from_confusion_matrix(cross_mat, num_classes=18):
 
     return pixel_accuracy_, mean_accuracy, meanIoU, meanFrqWIoU
 
+def calculate_eval_metrics_from_confusion_matrix2(cross_mat, num_classes=18):
+    # Dressup 10K, 18 classes
+    classes = ['background', 'hat', 'hair', 'sunglasses', 'upperclothes', 'skirt', 'pants', 'dress',
+               'belt', 'leftShoe', 'rightShoe', 'face', 'leftLeg', 'rightLeg', 'leftArm', 'rightArm', 'bag', 'scarf']
+
+    # CFPD, 23 classes
+    if num_classes == 23:
+        classes = ['bk', 'T-shirt', 'bag', 'belt', 'blazer', 'blouse', 'coat', 'dress', 'face', 'hair',
+                   'hat', 'jeans', 'legging', 'pants', 'scarf', 'shoe', 'shorts', 'skin', 'skirt',
+                   'socks', 'stocking', 'sunglass', 'sweater']
+
+    # LIP, 20 classes
+    if num_classes == 20:
+        classes = ['background', 'hat', 'hair', 'glove', 'sunglasses', 'upperclothes',
+                   'dress', 'coat', 'socks', 'pants', 'jumpsuits', 'scarf', 'skirt',
+                   'face', 'leftArm', 'rightArm', 'leftLeg', 'rightLeg', 'leftShoe',
+                   'rightShoe']
+
+    class_intersections = np.diag(cross_mat)
+    total_intersections = np.nansum(class_intersections)
+
+    gt_pixels = np.sum(cross_mat, axis=1)
+    pred_pixels = np.sum(cross_mat, axis=0)
+    total_pixels = np.sum(cross_mat)
+
+    # mean accuracy, mean IoU, frequency-weighted IoU
+    class_accuracies = []
+    IoUs = []
+    FWIoUs = []
+
+    for i in range(len(class_intersections)):
+        try:
+            acc = float(class_intersections[i] / gt_pixels[i])
+            class_accuracies.append(acc)
+        except:
+            class_accuracies.append(0)
+
+        try:
+            iu = float(
+                class_intersections[i] / (gt_pixels[i] + pred_pixels[i] - class_intersections[i]))
+            IoUs.append(iu)
+
+            fwiu = float((gt_pixels[i] * iu) / total_pixels)
+            FWIoUs.append(fwiu)
+        except:
+            IoUs.append(0)
+            FWIoUs.append(0)
+
+    # pixel accuracy
+    pixel_accuracy_ = float(total_intersections /
+                            total_pixels)
+    #print('>>>', 'overall/pixel accuracy', pixel_accuracy_)
+    #print('-' * 50)
+
+    # mean accuracy
+    #print('Accuracy for each class:')
+    for i in range(len(class_accuracies)):
+        print('%-15s: %f' % (classes[i], class_accuracies[i]))
+
+    mean_accuracy = float(np.nansum(class_accuracies) /
+                          num_classes)
+    #print('>>>', 'mean accuracy', np.nanmean(mean_accuracy))
+    #print('-' * 50)
+
+    # mean IoU
+    #print('IoU for each class:')
+    for i in range(len(IoUs)):
+        print('%-15s: %f' % (classes[i], IoUs[i]))
+
+    meanIoU = float(np.nansum(IoUs) / num_classes)
+    #print('>>>', 'mean IoU', np.nanmean(meanIoU))
+    #print('-' * 50)
+
+    # Total frequency-weighted IoU
+    meanFrqWIoU = np.nansum(FWIoUs)
+    #print('>>>', 'Freq Weighted IoU', meanFrqWIoU)
+    #print('=' * 50)
+
+    return pixel_accuracy_, mean_accuracy, meanIoU, meanFrqWIoU
 
 """
     calculate pixel accuracy

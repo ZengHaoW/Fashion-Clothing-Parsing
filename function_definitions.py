@@ -16,30 +16,27 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-
 label_colors_10k = ['black',  # "background", #     0
-                'sienna',  # "hat", #            1
-                'gray',  # "hair", #           2
-                'navy',  # "sunglass", #       3
-                'red',  # "upper-clothes", #  4
-                'gold',  # "skirt",  #          5
-                'blue',  # "pants",  #          6
-                'seagreen',  # "dress", #          7
-                'darkorchid',  # "belt", #           8
-                'firebrick',  # "left-shoe", #      9
-                    'darksalmon',  # "right-shoe", #     10
-                    'moccasin',  # "face",  #           11
-                    'darkgreen',  # "left-leg", #       12
+                 'sienna',  # "hat", #            1
+                 'gray',  # "hair", #           2
+                 'navy',  # "sunglass", #       3
+                 'red',  # "upper-clothes", #  4
+                 'gold',  # "skirt",  #          5
+                 'blue',  # "pants",  #          6
+                 'seagreen',  # "dress", #          7
+                 'darkorchid',  # "belt", #           8
+                 'firebrick',  # "left-shoe", #      9
+                     'darksalmon',  # "right-shoe", #     10
+                     'moccasin',  # "face",  #           11
+                     'darkgreen',  # "left-leg", #       12 
                     'royalblue',  # "right-leg", #      13
-                    'chartreuse',  # "left-arm",#       14
+                     'chartreuse',  # "left-arm",#       14
                     'paleturquoise',  # "right-arm", #      15
-                    'darkcyan',  # "bag", #            16
-                    'deepskyblue'  # "scarf" #          17
-                    ]
-
+                     'darkcyan',  # "bag", #            16
+                     'deepskyblue'  # "scarf" #          17
+                     ]
 clothnorm_10k = BoundaryNorm([-0.5, 0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 6.5,
                               7.5, 8.5, 9.5, 10.5, 11.5, 12.5, 13.5, 14.5, 15.5, 16.5, 17.5], 18)
-
 # colour map for LIP dataset
 lip_label_colours = [(0, 0, 0),  # 0=Background
                      (128, 0, 0),  # 1=Hat
@@ -62,8 +59,31 @@ lip_label_colours = [(0, 0, 0),  # 0=Background
                      (255, 255, 0),  # 18=LeftShoe
                      (255, 170, 0)  # 19=RightShoe
                      ]
-
-
+# colour map for CFPD dataset
+CFPD_label_colours = [              #0	bk
+                                    #1	T-shirt
+                                    #2	bag
+                                    #3	belt
+                                    #4	blazer
+                                    #5	blouse
+                                    #6	coat
+                                    #7	dress
+                                    #8	face
+                                    #9	hair
+                                    #10	hat
+                                    #11	jeans
+                                    #12	legging
+                                    #13	pants
+                                    #14	scarf
+                                    #15	shoe
+                                    #16	shorts
+                                    #17	skin
+                                    #18	skirt
+                                    #19	socks
+                                    #20	stocking
+                                    #21	sunglass
+                                    #22	sweater
+                     ]
 """
    Optimization functions
 """
@@ -98,21 +118,28 @@ def vgg_net(weights, image):
             kernels = Utils.get_variable(np.transpose(
                 kernels, (1, 0, 2, 3)), name=name + "_w")
             bias = Utils.get_variable(bias.reshape(-1), name=name + "_b")
-            current = Utils.conv2d_basic(current, kernels, bias)
+            current = Utils.conv2d_basic(current, kernels, bias)        # 前向传播结果 current
         elif kind == 'relu':
-            current = tf.nn.relu(current, name=name)
+            current = tf.nn.relu(current, name=name)        
             # if FLAGS.debug:
             # util.add_activation_summary(current)
         elif kind == 'pool':
+            # vgg 的前5层的stride都是2，也就是前5层的size依次减小1倍             
+            # 这里处理了前4层的stride，用的是平均池化
+            # 第5层的pool在下文的外部处理了，用的是最大池化
+            # pool1 size缩小2倍             
+            # pool2 size缩小4倍             
+            # pool3 size缩小8倍             
+            # pool4 size缩小16倍
             current = Utils.avg_pool_2x2(current)
         net[name] = current
         # added for resume better
     global_iter_counter = tf.Variable(0, name='global_step', trainable=False)
-    net['global_step'] = global_iter_counter
+    net['global_step'] = global_iter_counter    # 每层前向传播结果放在net中， 是一个字典
 
     return net
 
-
+'''
 def mode_visualize(sess, FLAGS, TEST_DIR, validation_dataset_reader, pred_annotation, image, annotation, keep_probability, NUM_OF_CLASSES):
     if not os.path.exists(TEST_DIR):
         os.makedirs(TEST_DIR)
@@ -176,18 +203,20 @@ def mode_visualize(sess, FLAGS, TEST_DIR, validation_dataset_reader, pred_annota
     print(">>> Prediction results (CRF):")
     crf_total_cm = np.sum(crf_crossMats, axis=0)
     EvalMetrics.show_result(crf_total_cm, NUM_OF_CLASSES)
+'''
 
 
-def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader, train_records, pred_annotation, image, annotation, keep_probability, logits, train_op, loss, summary_op, summary_writer, saver, display_step=300):
+
+def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader, logs_dataset_reader, train_records, logs_records, pred_annotation, image, annotation, keep_probability, logits, train_op, loss, summary_op, summary_writer, saver, display_step=300):
     print(">>>>>>>>>>>>>>>>Train mode")
     start = time.time()
 
     # Start decoder training
-
+    min_val_loss = 100
     valid = list()
     step = list()
     lo = list()
-
+    if_end = 0
     global_step = sess.run(net['global_step'])
     global_step = 0
     max_iteration = round(
@@ -200,10 +229,14 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
         "No. of maximum steps:",
         max_iteration,
         " Training epochs:",
-        FLAGS.training_epochs)
+        FLAGS.training_epochs, "display_step: ", display_step)
 
-    for itr in xrange(global_step, max_iteration):
+
+
+    for itr in xrange(global_step, (max_iteration + 1)):
         # 6.1 load train and GT images
+        if if_end == 1:
+            break
         train_images, train_annotations = train_dataset_reader.next_batch(
             FLAGS.batch_size)
 
@@ -216,13 +249,23 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
         sess.run(train_op, feed_dict=feed_dict)
 
         if itr % 10 == 0:
-            train_loss, summary_str = sess.run(
-                [loss, summary_op], feed_dict=feed_dict)
-            print("Step: %d, Train_loss:%g" % (itr, train_loss))
-            summary_writer.add_summary(summary_str, itr)
-            if itr % display_step == 0 and itr != 0:
-                lo.append(train_loss)
+            train_loss, summary_str, predict = sess.run(
+                [loss, summary_op, pred_annotation], feed_dict=feed_dict)
 
+            summary_writer.add_summary(summary_str, itr)
+            cross_mats = list()
+
+            for itr2 in range(FLAGS.batch_size):
+                predict = np.squeeze(predict)
+                train_annotations = np.squeeze(train_annotations)
+                crossMat = EvalMetrics.calculate_confusion_matrix(
+                train_annotations[itr2].astype(
+                    np.uint8), predict[itr2].astype(
+                    np.uint8), 23)
+                cross_mats.append(crossMat)
+            total_cm = np.sum(cross_mats, axis=0)
+            pixel_accuracy_, mean_accuracy, meanIoU, meanFrqWIoU = EvalMetrics.calculate_eval_metrics_from_confusion_matrix2(total_cm, 23)
+            print("Step: %d, Train_loss:%g, mean_accuracy:%g, meanIoU:%g" % (itr, train_loss, mean_accuracy, meanIoU))
         if itr % display_step == 0 and itr != 0:
             valid_images, valid_annotations = validation_dataset_reader.next_batch(
                 FLAGS.batch_size)
@@ -232,16 +275,22 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
                     image: valid_images,
                     annotation: valid_annotations,
                     keep_probability: 1.0})
+            now = time.time()
             print(
-                "%s ---> Validation_loss: %g" %
-                (datetime.datetime.now(), valid_loss))
+                "It has been trained for %.2f seconds.---> Validation_loss: %g" %
+                (now - start, valid_loss))
+            print()
             global_step = sess.run(net['global_step'])
-            saver.save(
-                sess,
-                FLAGS.logs_dir +
-                "model.ckpt",
-                global_step=global_step)
-
+            if (valid_loss / train_loss) > 2:
+                if_end = 1
+            if valid_loss < min_val_loss:
+                min_val_loss = valid_loss
+                saver.save(
+                    sess,
+                    FLAGS.logs_dir +
+                    "model.ckpt",
+                    global_step=global_step)
+            lo.append(train_loss)
             valid.append(valid_loss)
             step.append(itr)
             # print("valid", valid, "step", step)
@@ -282,6 +331,13 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
             except Exception as err:
                 print(err)
 
+            mode_view(sess, FLAGS, "./test/VisImage/", train_dataset_reader, logs_dataset_reader,
+                      logs_records,
+                      pred_annotation, image, annotation, keep_probability, logits, 23)
+
+
+
+
     try:
         np.savetxt(
             FLAGS.logs_dir +
@@ -295,146 +351,6 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
     end = time.time()
     print("Learning time:", end - start, "seconds")
 
-
-def mode_test(sess, FLAGS, TEST_DIR, validation_dataset_reader, valid_records, pred_annotation, image, annotation, keep_probability, logits, NUM_OF_CLASSES):
-    print(">>>>>>>>>>>>>>>>Test mode")
-    start = time.time()
-
-    if not os.path.exists(TEST_DIR):
-        os.makedirs(TEST_DIR)
-
-    validation_dataset_reader.reset_batch_offset(0)
-
-    crossMats = list()
-    crf_crossMats = list()
-
-    for itr1 in range(validation_dataset_reader.get_num_of_records() // FLAGS.batch_size):
-
-        valid_images, valid_annotations = validation_dataset_reader.next_batch(
-            FLAGS.batch_size)
-        pred, logits1 = sess.run([pred_annotation, logits],
-                                 feed_dict={image: valid_images, annotation: valid_annotations,
-                                            keep_probability: 1.0})
-
-        valid_annotations = np.squeeze(valid_annotations, axis=3)
-        pred = np.squeeze(pred)
-        print("logits shape:", logits1.shape)
-        np.set_printoptions(threshold=np.inf)
-
-        for itr2 in range(FLAGS.batch_size):
-
-            fig = plt.figure()
-            pos = 240 + 1
-            plt.subplot(pos)
-            plt.imshow(valid_images[itr2].astype(np.uint8))
-            plt.axis('off')
-            plt.title('Original')
-
-            pos = 240 + 2
-            plt.subplot(pos)
-            plt.imshow(
-                valid_annotations[itr2].astype(
-                    np.uint8),
-                cmap=plt.get_cmap('nipy_spectral'))
-            plt.axis('off')
-            plt.title('GT')
-
-            pos = 240 + 3
-            plt.subplot(pos)
-            plt.imshow(
-                pred[itr2].astype(
-                    np.uint8),
-                cmap=plt.get_cmap('nipy_spectral'))
-            plt.axis('off')
-            plt.title('Prediction')
-
-            # Confusion matrix for this image prediction
-            crossMat = EvalMetrics.calculate_confusion_matrix(
-                valid_annotations[itr2].astype(
-                    np.uint8), pred[itr2].astype(
-                    np.uint8), NUM_OF_CLASSES)
-            crossMats.append(crossMat)
-
-            np.savetxt(TEST_DIR +
-                       "Crossmatrix" +
-                       str(itr1 *
-                           FLAGS.batch_size +
-                           itr2) +
-                       ".csv", crossMat, fmt='%4i', delimiter=',')
-
-            # Save input, gt, pred, crf_pred, sum figures for this image
-
-            # ---------------------------------------------
-            Utils.save_image(valid_images[itr2].astype(np.uint8), TEST_DIR,
-                             name="inp_" + str(itr1 * FLAGS.batch_size + itr2))
-            Utils.save_image(valid_annotations[itr2].astype(np.uint8), TEST_DIR,
-                             name="gt_" + str(itr1 * FLAGS.batch_size + itr2))
-            Utils.save_image(pred[itr2].astype(np.uint8),
-                             TEST_DIR,
-                             name="pred_" + str(itr1 * FLAGS.batch_size + itr2))
-
-            # --------------------------------------------------
-            """ Generate CRF """
-            crfimage, crfoutput = denseCRF.crf(TEST_DIR + "inp_" + str(itr1 * FLAGS.batch_size + itr2) + ".png", TEST_DIR + "pred_" + str(
-                itr1 * FLAGS.batch_size + itr2) + ".png", TEST_DIR + "crf_" + str(itr1 * FLAGS.batch_size + itr2) + ".png", NUM_OF_CLASSES, use_2d=True)
-
-            # Confusion matrix for this image prediction with crf
-            crf_crossMat = EvalMetrics.calculate_confusion_matrix(
-                valid_annotations[itr2].astype(
-                    np.uint8), crfoutput.astype(
-                    np.uint8), NUM_OF_CLASSES)
-            crf_crossMats.append(crf_crossMat)
-
-            np.savetxt(TEST_DIR +
-                       "crf_Crossmatrix" +
-                       str(itr1 *
-                           FLAGS.batch_size +
-                           itr2) +
-                       ".csv", crf_crossMat, fmt='%4i', delimiter=',')
-
-            pos = 240 + 4
-            plt.subplot(pos)
-            plt.imshow(crfoutput.astype(np.uint8),
-                       cmap=plt.get_cmap('nipy_spectral'))
-            plt.axis('off')
-            plt.title('Prediction + CRF')
-
-            plt.savefig(TEST_DIR + "resultSum_" +
-                        str(itr1 * FLAGS.batch_size + itr2))
-
-            plt.close('all')
-            print("Saved image: %d" % (itr1 * FLAGS.batch_size + itr2))
-
-    try:
-        total_cm = np.sum(crossMats, axis=0)
-        np.savetxt(
-            FLAGS.logs_dir +
-            "Crossmatrix.csv",
-            total_cm,
-            fmt='%4i',
-            delimiter=',')
-
-        print(">>> Prediction results:")
-        EvalMetrics.show_result(total_cm, NUM_OF_CLASSES)
-
-        # Prediction with CRF
-        crf_total_cm = np.sum(crf_crossMats, axis=0)
-        np.savetxt(
-            FLAGS.logs_dir +
-            "CRF_Crossmatrix.csv",
-            crf_total_cm,
-            fmt='%4i',
-            delimiter=',')
-
-        print("\n")
-        print(">>> Prediction results (CRF):")
-        EvalMetrics.show_result(crf_total_cm, NUM_OF_CLASSES)
-
-    except Exception as err:
-        print(err)
-
-    end = time.time()
-    print("Testing time:", end - start, "seconds")
 
 
 def mode_crftest(sess, FLAGS, TEST_DIR, validation_dataset_reader, valid_records, pred_annotation, image, annotation, keep_probability, logits, NUM_OF_CLASSES):
@@ -756,6 +672,211 @@ def mode_full_test(sess, flags, save_dir, validation_dataset_reader, valid_recor
     print("Testing time:", end - start, "seconds")
 
 
+def mode_test(sess, FLAGS, TEST_DIR, validation_dataset_reader, valid_records, pred_annotation, image, annotation, keep_probability, logits, NUM_OF_CLASSES):
+    print(">>>>>>>>>>>>>>>>Test mode")
+    start = time.time()
+
+    if not os.path.exists(TEST_DIR):
+        os.makedirs(TEST_DIR)
+
+    validation_dataset_reader.reset_batch_offset(0)
+
+    crossMats = list()
+    crf_crossMats = list()
+
+    for itr1 in range(validation_dataset_reader.get_num_of_records() // FLAGS.batch_size):
+
+        valid_images, valid_annotations = validation_dataset_reader.next_batch(
+            FLAGS.batch_size)
+        pred, logits1 = sess.run([pred_annotation, logits],
+                                 feed_dict={image: valid_images, annotation: valid_annotations,
+                                            keep_probability: 1.0})
+
+        valid_annotations = np.squeeze(valid_annotations, axis=3)
+        pred = np.squeeze(pred)
+        print("logits shape:", logits1.shape)
+        np.set_printoptions(threshold=np.inf)
+
+        for itr2 in range(FLAGS.batch_size):
+
+            fig = plt.figure()
+            pos = 240 + 1
+            plt.subplot(pos)
+            plt.imshow(valid_images[itr2].astype(np.uint8))
+            plt.axis('off')
+            plt.title('Original')
+
+            pos = 240 + 2
+            plt.subplot(pos)
+            plt.imshow(
+                valid_annotations[itr2].astype(
+                    np.uint8),
+                cmap=plt.get_cmap('nipy_spectral'))
+            plt.axis('off')
+            plt.title('GT')
+
+            pos = 240 + 3
+            plt.subplot(pos)
+            plt.imshow(
+                pred[itr2].astype(
+                    np.uint8),
+                cmap=plt.get_cmap('nipy_spectral'))
+            plt.axis('off')
+            plt.title('Prediction')
+
+            # Confusion matrix for this image prediction
+            crossMat = EvalMetrics.calculate_confusion_matrix(
+                valid_annotations[itr2].astype(
+                    np.uint8), pred[itr2].astype(
+                    np.uint8), NUM_OF_CLASSES)
+            crossMats.append(crossMat)
+
+            np.savetxt(TEST_DIR +
+                       "Crossmatrix" +
+                       str(itr1 *
+                           FLAGS.batch_size +
+                           itr2) +
+                       ".csv", crossMat, fmt='%4i', delimiter=',')
+
+            # Save input, gt, pred, crf_pred, sum figures for this image
+            '''
+            # ---------------------------------------------
+            Utils.save_image(valid_images[itr2].astype(np.uint8), TEST_DIR,
+                             name="inp_" + str(itr1 * FLAGS.batch_size + itr2))
+            Utils.save_image(valid_annotations[itr2].astype(np.uint8), TEST_DIR,
+                             name="gt_" + str(itr1 * FLAGS.batch_size + itr2))
+            Utils.save_image(pred[itr2].astype(np.uint8),
+                             TEST_DIR,
+                             name="pred_" + str(itr1 * FLAGS.batch_size + itr2))
+            '''
+            '''
+            # --------------------------------------------------
+            """ Generate CRF """
+            crfimage, crfoutput = denseCRF.crf(TEST_DIR + "inp_" + str(itr1 * FLAGS.batch_size + itr2) + ".png", TEST_DIR + "pred_" + str(
+                itr1 * FLAGS.batch_size + itr2) + ".png", TEST_DIR + "crf_" + str(itr1 * FLAGS.batch_size + itr2) + ".png", NUM_OF_CLASSES, use_2d=True)
+
+            # Confusion matrix for this image prediction with crf
+            crf_crossMat = EvalMetrics.calculate_confusion_matrix(
+                valid_annotations[itr2].astype(
+                    np.uint8), crfoutput.astype(
+                    np.uint8), NUM_OF_CLASSES)
+            crf_crossMats.append(crf_crossMat)
+
+            np.savetxt(TEST_DIR +
+                       "crf_Crossmatrix" +
+                       str(itr1 *
+                           FLAGS.batch_size +
+                           itr2) +
+                       ".csv", crf_crossMat, fmt='%4i', delimiter=',')
+
+            pos = 240 + 4
+            plt.subplot(pos)
+            plt.imshow(crfoutput.astype(np.uint8),
+                       cmap=plt.get_cmap('nipy_spectral'))
+            plt.axis('off')
+            plt.title('Prediction + CRF')
+            '''
+            plt.savefig(TEST_DIR + "resultSum_" +
+                        str(itr1 * FLAGS.batch_size + itr2))
+
+            plt.close('all')
+            print("Saved image: %d" % (itr1 * FLAGS.batch_size + itr2))
+
+    try:
+        total_cm = np.sum(crossMats, axis=0)
+        np.savetxt(
+            FLAGS.logs_dir +
+            "Crossmatrix.csv",
+            total_cm,
+            fmt='%4i',
+            delimiter=',')
+
+        print(">>> Prediction results:")
+        EvalMetrics.show_result(total_cm, NUM_OF_CLASSES)
+        '''
+        # Prediction with CRF
+        crf_total_cm = np.sum(crf_crossMats, axis=0)
+        np.savetxt(
+            FLAGS.logs_dir +
+            "CRF_Crossmatrix.csv",
+            crf_total_cm,
+            fmt='%4i',
+            delimiter=',')
+
+        print("\n")
+        print(">>> Prediction results (CRF):")
+        EvalMetrics.show_result(crf_total_cm, NUM_OF_CLASSES)
+        '''
+    except Exception as err:
+        print(err)
+
+    end = time.time()
+    print("Testing time:", end - start, "seconds")
+
+
+def mode_view(sess, flags, save_dir, train_dataset_reader, test_dataset_reader, valid_records, pred_annotation, image, annotation, keep_probability, logits, num_classes):
+
+    temp = 4
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    test_dataset_reader.reset_batch_offset(0)
+    probability = tf.nn.softmax(logits=logits, axis=3)
+
+    cross_mats = list()
+    # crf_cross_mats = list()
+
+    # tf_pixel_acc_list = []
+    # tf_miou_list = []
+
+    # pixel_acc_op, pixel_acc_update_op = tf.metrics.accuracy(labels=annotation, predictions=pred_annotation)
+    # mean_iou_op, mean_iou_update_op = tf.metrics.mean_iou(labels=annotation, predictions=pred_annotation, num_classes=num_classes)
+
+    for itr1 in range(1):
+
+        logs_images, logs_annotations = test_dataset_reader.next_batch(
+            flags.batch_size)
+
+        predprob, pred = sess.run([probability, pred_annotation], feed_dict={image: logs_images, keep_probability: 1.0})
+
+        np.set_printoptions(threshold=10)
+
+        pred = np.squeeze(pred)
+        # predprob = np.squeeze(predprob)
+        logs_annotations = np.squeeze(logs_annotations, axis=3)
+
+        for itr2 in range(temp):
+
+            fig = plt.figure()
+            # pos = 240 + 1
+            plt.subplot(3,1,1)
+            plt.imshow(logs_images[itr2].astype(np.uint8))
+            plt.axis('off')
+            plt.title('Original')
+
+            #pos = 240 + 2
+            plt.subplot(3,1,2)
+            # plt.imshow(valid_annotations[itr2].astype(np.uint8), cmap=plt.get_cmap('nipy_spectral'))
+            plt.imshow(logs_annotations[itr2].astype(
+                np.uint8), cmap=plt.get_cmap('nipy_spectral'))
+            plt.axis('off')
+            plt.title('Ground Truth')
+
+            #pos = 240 + 3
+            plt.subplot(3,1,3)
+            # plt.imshow(pred[itr2].astype(np.uint8), cmap=plt.get_cmap('nipy_spectral'))
+            plt.imshow(pred[itr2].astype(np.uint8),
+                       cmap=plt.get_cmap('nipy_spectral'))
+            plt.axis('off')
+            plt.title('Prediction')
+            plt.savefig(save_dir + "epoch_" + str(train_dataset_reader.epochs_completed) + "_image_" +
+                        str(itr1 * temp + itr2))
+
+            plt.close('all')
+            #print("Saved image: %d" % (itr1 * flags.batch_size + itr2))
+            print("epoch %d Saved image: %s" % (train_dataset_reader.epochs_completed, str(itr1 * temp + itr2)))
+            # Save input, gt, pred, crf_pred, sum figures for this image
+
+
 def mode_new_test(sess, flags, save_dir, validation_dataset_reader, valid_records, pred_annotation, image, annotation, keep_probability, logits, num_classes):
     print(">>>>>>>>>>>>>>>>Test mode")
     start = time.time()
@@ -794,7 +915,7 @@ def mode_new_test(sess, flags, save_dir, validation_dataset_reader, valid_record
 
         pred = np.squeeze(pred)
         predprob = np.squeeze(predprob)
-        valid_annotations = np.squeeze(valid_annotations, axis=3)
+        valid_annotations = np.squeeze(valid_annotations)
 
         for itr2 in range(flags.batch_size):
 
@@ -811,7 +932,7 @@ def mode_new_test(sess, flags, save_dir, validation_dataset_reader, valid_record
             plt.imshow(valid_annotations[itr2].astype(
                 np.uint8), cmap=ListedColormap(label_colors_10k), norm=clothnorm_10k)
             plt.axis('off')
-            plt.title('GT')
+            plt.title('Ground Truth')
 
             pos = 240 + 3
             plt.subplot(pos)
@@ -820,7 +941,8 @@ def mode_new_test(sess, flags, save_dir, validation_dataset_reader, valid_record
                        cmap=ListedColormap(label_colors_10k), norm=clothnorm_10k)
             plt.axis('off')
             plt.title('Prediction')
-
+            plt.savefig(save_dir + "resultSum_" +
+                        str(itr1 * flags.batch_size + itr2))
             # Confusion matrix for this image prediction
             crossMat = EvalMetrics.calculate_confusion_matrix(
                 valid_annotations[itr2].astype(
@@ -838,6 +960,7 @@ def mode_new_test(sess, flags, save_dir, validation_dataset_reader, valid_record
             # Save input, gt, pred, crf_pred, sum figures for this image
 
             """ Generate CRF """
+            '''
             # 1. run CRF
             crfwithprobsoutput = denseCRF.crf_with_probs(
                 valid_images[itr2].astype(np.uint8), predprob[itr2], num_classes)
@@ -888,9 +1011,8 @@ def mode_new_test(sess, flags, save_dir, validation_dataset_reader, valid_record
                        cmap=ListedColormap(label_colors_10k), norm=clothnorm_10k)
             plt.axis('off')
             plt.title('Prediction + CRF')
+            '''
 
-            plt.savefig(save_dir + "resultSum_" +
-                        str(itr1 * flags.batch_size + itr2))
 
             plt.close('all')
             print("Saved image: %d" % (itr1 * flags.batch_size + itr2))
@@ -910,7 +1032,7 @@ def mode_new_test(sess, flags, save_dir, validation_dataset_reader, valid_record
 
         print("\n>>> Prediction results:")
         EvalMetrics.calculate_eval_metrics_from_confusion_matrix(total_cm, num_classes)
-
+        '''
         # Prediction with CRF
         crf_total_cm = np.sum(crf_cross_mats, axis=0)
         np.savetxt(
@@ -923,7 +1045,7 @@ def mode_new_test(sess, flags, save_dir, validation_dataset_reader, valid_record
         print("\n")
         print("\n>>> Prediction results (CRF):")
         EvalMetrics.calculate_eval_metrics_from_confusion_matrix(crf_total_cm, num_classes)
-
+        '''
     except Exception as err:
         print(err)
 

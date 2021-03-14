@@ -12,7 +12,7 @@ def main():
 
 
 def init_path():
-    data_dir = "logs/UNetMSc_10k/TestImage/"
+    data_dir = "logs/FCN_LIP/TestImage/"
 
     file_names = os.listdir(data_dir)
 
