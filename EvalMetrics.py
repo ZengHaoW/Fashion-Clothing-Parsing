@@ -367,8 +367,8 @@ def calculate_eval_metrics_from_confusion_matrix2(cross_mat, num_classes=18):
 
     # mean accuracy
     #print('Accuracy for each class:')
-    for i in range(len(class_accuracies)):
-        print('%-15s: %f' % (classes[i], class_accuracies[i]))
+    #for i in range(len(class_accuracies)):
+    #    print('%-15s: %f' % (classes[i], class_accuracies[i]))
 
     mean_accuracy = float(np.nansum(class_accuracies) /
                           num_classes)
@@ -377,8 +377,8 @@ def calculate_eval_metrics_from_confusion_matrix2(cross_mat, num_classes=18):
 
     # mean IoU
     #print('IoU for each class:')
-    for i in range(len(IoUs)):
-        print('%-15s: %f' % (classes[i], IoUs[i]))
+    #for i in range(len(IoUs)):
+    #    print('%-15s: %f' % (classes[i], IoUs[i]))
 
     meanIoU = float(np.nansum(IoUs) / num_classes)
     #print('>>>', 'mean IoU', np.nanmean(meanIoU))

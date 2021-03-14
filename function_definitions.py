@@ -254,10 +254,10 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
 
             summary_writer.add_summary(summary_str, itr)
             cross_mats = list()
-
+            predict = np.squeeze(predict)
+            train_annotations = np.squeeze(train_annotations)
             for itr2 in range(FLAGS.batch_size):
-                predict = np.squeeze(predict)
-                train_annotations = np.squeeze(train_annotations)
+
                 crossMat = EvalMetrics.calculate_confusion_matrix(
                 train_annotations[itr2].astype(
                     np.uint8), predict[itr2].astype(
@@ -269,16 +269,29 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
         if itr % display_step == 0 and itr != 0:
             valid_images, valid_annotations = validation_dataset_reader.next_batch(
                 FLAGS.batch_size)
-            valid_loss = sess.run(
-                loss,
+            valid_loss, pre = sess.run(
+                [loss, pred_annotation],
                 feed_dict={
                     image: valid_images,
                     annotation: valid_annotations,
                     keep_probability: 1.0})
+            cross_mats2 = list()
+            pre = np.squeeze(pre)
+            valid_annotations = np.squeeze(valid_annotations)
+            for itr3 in range(FLAGS.batch_size):
+                pre = np.squeeze(pre)
+                valid_annotations = np.squeeze(valid_annotations)
+                crossMat = EvalMetrics.calculate_confusion_matrix(
+                train_annotations[itr2].astype(
+                    np.uint8), predict[itr2].astype(
+                    np.uint8), 23)
+                cross_mats2.append(crossMat)
+            total_cm = np.sum(cross_mats2, axis=0)
+            pixel_accuracy_2, mean_accuracy2, meanIoU2, meanFrqWIoU2 = EvalMetrics.calculate_eval_metrics_from_confusion_matrix2(total_cm, 23)
             now = time.time()
             print(
-                "It has been trained for %.2f seconds.---> Validation_loss: %g" %
-                (now - start, valid_loss))
+                "It has been trained for %.2f seconds.---> Validation_loss: %g, mean_accuracy:%g, meanIoU:%g" %
+                (now - start, valid_loss, mean_accuracy2, meanIoU2))
             print()
             global_step = sess.run(net['global_step'])
             if (valid_loss / train_loss) > 2:
