@@ -15,11 +15,21 @@ import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-
-DATA_SET = "CFPD"
+DATA_SET = "10k"
+# DATA_SET = "CFPD"
 # DATA_SET = "LIP"
 
 FLAGS = tf.flags.FLAGS
+if DATA_SET == "10k":
+    tf.flags.DEFINE_integer("batch_size", "2", "batch size for training")
+    tf.flags.DEFINE_integer(
+        "training_epochs",
+        "50",
+        "number of epochs for training")
+    tf.flags.DEFINE_string("logs_dir", "logs/FCN_10k/",
+                           "path to logs directory")
+    tf.flags.DEFINE_string(
+        "data_dir", "C:/Users/zx08x/Desktop/humanparsing/", "path to dataset")
 
 if DATA_SET == "CFPD":
     tf.flags.DEFINE_integer("batch_size", "31", "batch size for training")
@@ -213,8 +223,8 @@ def main(argv=None):
     print("Setting up image reader from ", FLAGS.data_dir, "...")
     print("data dir:", FLAGS.data_dir)
 
-    #train_records, valid_records = fashion_parsing.read_dataset(FLAGS.data_dir)
-    #test_records = None
+    train_records, valid_records, test_records, logs_records = fashion_parsing.read_dataset(FLAGS.data_dir)
+
     if DATA_SET == "CFPD":
         train_records, valid_records, test_records, logs_records = ClothingParsing.read_dataset(
             FLAGS.data_dir)
@@ -244,9 +254,9 @@ def main(argv=None):
             test_dataset_reader = DataSetReader.BatchDatset("test",
                 test_records, image_options)
         else:
-            test_dataset_reader = DataSetReader.BatchDatset(
+            test_dataset_reader = DataSetReader.BatchDatset("test",
                 valid_records, image_options)
-            test_records = valid_records
+            #test_records = valid_records
 
     sess = tf.Session()
 

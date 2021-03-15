@@ -25,10 +25,10 @@ def read_dataset(data_dir):
     # 'filename': filename}
     training_records = []
 
-    testdir = "D:/Datasets/Dressup10k/images/training/"
+    traindir = "C:/Users/zx08x/Desktop/humanparsing/training/"
 
-    print("## Training dir:", testdir)
-    for filename in glob.glob(testdir + '*.jpg'):  # assuming jpg files
+    print("## Training dir:", traindir)
+    for filename in glob.glob(traindir + '*.jpg'):  # assuming jpg files
         record = {'image': filename, 'annotation': filename.replace(
             "images", "annotations").replace(
             "jpg", "png"), 'filename': filename}
@@ -36,17 +36,44 @@ def read_dataset(data_dir):
 
     validation_records = []
 
-    validationdir = "D:/Datasets/Dressup10k/images/validation/"
+    validationdir = "C:/Users/zx08x/Desktop/humanparsing/validation/"
 
     print("## Validation dir:", validationdir)
     for filename in glob.glob(
             validationdir + '*.jpg'):  # assuming jpg files
-        record = {'image': filename, 'annotation': filename.replace(
-            "images", "annotations").replace(
-            "jpg", "png"), 'filename': filename}
+        record = {'image': filename,
+                  'annotation': filename.replace("images", "annotations").replace("jpg", "png"),
+                  'filename': filename}
         validation_records.append(record)
 
-    return training_records, validation_records
+    logs_records = []
+
+    logsdir = "test/"
+    print("## logs dir:", logsdir)
+    for filename in glob.glob(logsdir + '*.jpg'):  # assuming jpg files
+        record = {'image': None, 'annotation': None, 'filename': None}
+        record['image'] = filename
+        record['filename'] = filename
+        record['annotation'] = filename.replace(
+            "jpg", "png")
+        # record['label'] = filename.replace(
+        #   "jpg", "png")
+        logs_records.append(record)
+    testing_records = []
+    testdir = "C:/Users/zx08x/Desktop/humanparsing/test/"
+    print("## Testing dir:", testdir)
+    for filename in glob.glob(
+            testdir + '*.jpg'):  # assuming jpg files
+        record = {'image': None, 'annotation': None, 'filename': None}
+        record['image'] = filename
+        record['filename'] = filename
+        record['annotation'] = filename.replace(
+            "jpg", "png")
+        record['label'] = filename.replace(
+            "jpg", "png")
+        testing_records.append(record)
+
+    return training_records, validation_records, testing_records, logs_records
 
 
 """

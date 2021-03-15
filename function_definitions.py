@@ -59,31 +59,8 @@ lip_label_colours = [(0, 0, 0),  # 0=Background
                      (255, 255, 0),  # 18=LeftShoe
                      (255, 170, 0)  # 19=RightShoe
                      ]
-# colour map for CFPD dataset
-CFPD_label_colours = [              #0	bk
-                                    #1	T-shirt
-                                    #2	bag
-                                    #3	belt
-                                    #4	blazer
-                                    #5	blouse
-                                    #6	coat
-                                    #7	dress
-                                    #8	face
-                                    #9	hair
-                                    #10	hat
-                                    #11	jeans
-                                    #12	legging
-                                    #13	pants
-                                    #14	scarf
-                                    #15	shoe
-                                    #16	shorts
-                                    #17	skin
-                                    #18	skirt
-                                    #19	socks
-                                    #20	stocking
-                                    #21	sunglass
-                                    #22	sweater
-                     ]
+
+
 """
    Optimization functions
 """
@@ -270,7 +247,7 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
             total_cm = np.sum(cross_mats, axis=0)
             pixel_accuracy_, tra_acc, tra_IoU, meanFrqWIoU = EvalMetrics.calculate_eval_metrics_from_confusion_matrix2(total_cm, 23)
             print("Step: %d, Train_loss:%g, Train_mean_accuracy:%g, Train_meanIoU:%g" % (itr, train_loss, tra_acc, tra_IoU))
-        if itr % display_step == 0:
+        if itr % display_step == 0 and itr != 0:
             valid_images, valid_annotations = validation_dataset_reader.next_batch(
                 FLAGS.batch_size)
             valid_loss, pre = sess.run(
@@ -297,6 +274,13 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
                 (now - start, valid_loss, v_acc, v_IoU))
             print()
             global_step = sess.run(net['global_step'])
+            lo.append(train_loss)
+            valid.append(valid_loss)
+            step.append(itr)
+            train_acc.append(tra_acc)
+            train_mean_IoU.append(tra_IoU)
+            val_acc.append(v_acc)
+            val_mean_IoU.append((v_IoU))
             if (valid_loss / train_loss) > 3 or (tra_IoU / v_IoU) > 5:
                 if_end = 1
             if v_IoU > max(val_mean_IoU):
@@ -305,13 +289,7 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
                     FLAGS.logs_dir +
                     "model.ckpt",
                     global_step=global_step)
-            lo.append(train_loss)
-            valid.append(valid_loss)
-            step.append(itr)
-            train_acc.append(tra_acc)
-            train_mean_IoU.append(tra_IoU)
-            val_acc.append(v_acc)
-            val_mean_IoU.append((v_IoU))
+
             # print("valid", valid, "step", step)
             '''
             try:
@@ -370,7 +348,7 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
                 plt.ylabel("IoU")
                 plt.xlabel("Step")
                 plt.title('train_mean_IoU + val_mean_IoU')
-                plt.legend(['train_mean_IoU', 'val_acc'],
+                plt.legend(['train_mean_IoU', 'val_mean_IoU'],
                            loc='upper right')
                 plt.savefig(FLAGS.logs_dir + "train_mean_IoU + val_mean_IoU.jpg")
             except Exception as err:
