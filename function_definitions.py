@@ -210,7 +210,7 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
         "No. of maximum steps:",
         max_iteration,
         " Training epochs:",
-        FLAGS.training_epochs, "display_step: ", display_step)
+        FLAGS.training_epochs, "display_step: ", display_step, "batch_size: ", FLAGS.batch_size)
 
 
 
@@ -224,7 +224,7 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
         feed_dict = {
             image: train_images,
             annotation: train_annotations,
-            keep_probability: 0.85}
+            keep_probability: 0.5}
 
         # 6.2 training
         sess.run(train_op, feed_dict=feed_dict)
@@ -242,10 +242,10 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
                 crossMat = EvalMetrics.calculate_confusion_matrix(
                 train_annotations[itr2].astype(
                     np.uint8), predict[itr2].astype(
-                    np.uint8), 23)
+                    np.uint8), 18)
                 cross_mats.append(crossMat)
             total_cm = np.sum(cross_mats, axis=0)
-            pixel_accuracy_, tra_acc, tra_IoU, meanFrqWIoU = EvalMetrics.calculate_eval_metrics_from_confusion_matrix2(total_cm, 23)
+            pixel_accuracy_, tra_acc, tra_IoU, meanFrqWIoU = EvalMetrics.calculate_eval_metrics_from_confusion_matrix2(total_cm, 18)
             print("Step: %d, Train_loss:%g, Train_mean_accuracy:%g, Train_meanIoU:%g" % (itr, train_loss, tra_acc, tra_IoU))
         if itr % display_step == 0 and itr != 0:
             valid_images, valid_annotations = validation_dataset_reader.next_batch(
@@ -264,10 +264,10 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
                 crossMat = EvalMetrics.calculate_confusion_matrix(
                 valid_annotations[itr2].astype(
                     np.uint8), pre[itr2].astype(
-                    np.uint8), 23)
+                    np.uint8), 18)
                 cross_mats2.append(crossMat)
             total_cm = np.sum(cross_mats2, axis=0)
-            pixel_accuracy_2, v_acc, v_IoU, meanFrqWIoU2 = EvalMetrics.calculate_eval_metrics_from_confusion_matrix2(total_cm, 23)
+            pixel_accuracy_2, v_acc, v_IoU, meanFrqWIoU2 = EvalMetrics.calculate_eval_metrics_from_confusion_matrix2(total_cm, 18)
             now = time.time()
             print(
                 "It has been trained for %.2f seconds.---> Validation_loss: %g, Validation_mean_accuracy:%g, Validation_meanIoU:%g" %
@@ -283,12 +283,12 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
             val_mean_IoU.append((v_IoU))
             if (valid_loss / train_loss) > 3 or (tra_IoU / v_IoU) > 5:
                 if_end = 1
-            if v_IoU > max(val_mean_IoU):
-                saver.save(
-                    sess,
-                    FLAGS.logs_dir +
-                    "model.ckpt",
-                    global_step=global_step)
+            #if v_IoU >= max(val_mean_IoU):
+            saver.save(
+                sess,
+                FLAGS.logs_dir +
+                "model.ckpt",
+                global_step=global_step)
 
             # print("valid", valid, "step", step)
             '''
@@ -316,7 +316,7 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
             '''
             try:
                 plt.clf()
-                plt.ylim(0, 1.5)
+                plt.ylim(0, 1)
                 plt.plot(np.array(step), np.array(lo))
                 plt.plot(np.array(step), np.array(valid))
                 plt.ylabel("Loss")
@@ -355,7 +355,7 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
                 print(err)
             mode_view(sess, FLAGS, "./test/VisImage/", train_dataset_reader, logs_dataset_reader,
                       logs_records,
-                      pred_annotation, image, annotation, keep_probability, logits, 23)
+                      pred_annotation, image, annotation, keep_probability, logits, 18)
 
 
 

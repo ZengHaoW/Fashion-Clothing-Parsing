@@ -21,10 +21,10 @@ DATA_SET = "10k"
 
 FLAGS = tf.flags.FLAGS
 if DATA_SET == "10k":
-    tf.flags.DEFINE_integer("batch_size", "2", "batch size for training")
+    tf.flags.DEFINE_integer("batch_size", "64", "batch size for training")
     tf.flags.DEFINE_integer(
         "training_epochs",
-        "50",
+        "10",
         "number of epochs for training")
     tf.flags.DEFINE_string("logs_dir", "logs/FCN_10k/",
                            "path to logs directory")
@@ -55,7 +55,7 @@ if DATA_SET == "LIP":
 
 tf.flags.DEFINE_float(
     "learning_rate",
-    "1e-5",
+    "1e-4",
     "Learning rate for Adam Optimizer")
 tf.flags.DEFINE_string("model_dir", "Model_zoo/", "Path to vgg model mat")
 tf.flags.DEFINE_bool('debug', "False", "Debug mode: True/ False")
@@ -183,7 +183,8 @@ def train(loss_val, var_list, global_step):
         # print(len(var_list))
         for grad, var in grads:
             Utils.add_gradient_summary(grad, var)
-    return optimizer.apply_gradients(grads, global_step=global_step)
+
+    return optimizer.apply_gradients(grads, global_step=global_step), optimizer
 
 
 def main(argv=None):
@@ -215,8 +216,7 @@ def main(argv=None):
     if FLAGS.debug:
         for var in trainable_var:
             Utils.add_to_regularization_and_summary(var)
-    train_op = train(loss, trainable_var, net['global_step'])
-
+    train_op, optimizer = train(loss, trainable_var, net['global_step'])
     print("Setting up summary op...")
     summary_op = tf.summary.merge_all()
 
@@ -280,7 +280,7 @@ def main(argv=None):
 
         fd.mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader, logs_dataset_reader, train_records, logs_records,pred_annotation,
                       image, annotation, keep_probability, logits, train_op, loss, summary_op, summary_writer, saver,
-                      DISPLAY_STEP)
+                      DISPLAY_STEP, optimizer)
 
     elif FLAGS.mode == "test":  # heejune added
 
