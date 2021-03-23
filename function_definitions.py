@@ -16,7 +16,7 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-label_colors_10k = ['black',  # "background", #     0
+label_colors_10k = ['white',  # "background", #     0
                  'sienna',  # "hat", #            1
                  'gray',  # "hair", #           2
                  'navy',  # "sunglass", #       3
@@ -184,16 +184,16 @@ def mode_visualize(sess, FLAGS, TEST_DIR, validation_dataset_reader, pred_annota
 
 
 
-def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader, logs_dataset_reader, train_records, logs_records, pred_annotation, image, annotation, keep_probability, logits, train_op, loss, summary_op, summary_writer, saver, display_step=300):
+def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader, train_records,
+                      pred_annotation,
+                      image, annotation, keep_probability, logits, train_op, loss, summary_op, summary_writer,
+                      saver, display_step=300):
     print(">>>>>>>>>>>>>>>>Train mode")
     start = time.time()
 
     # Start decoder training
     min_val_loss = 100
-    train_acc = list()
-    val_acc = list()
-    train_mean_IoU = list()
-    val_mean_IoU = list()
+
     valid = list()
     step = list()
     lo = list()
@@ -210,7 +210,7 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
         "No. of maximum steps:",
         max_iteration,
         " Training epochs:",
-        FLAGS.training_epochs, "display_step: ", display_step)
+        FLAGS.training_epochs, "display_step: ", display_step, "batch_size: ", FLAGS.batch_size)
 
 
 
@@ -224,71 +224,43 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
         feed_dict = {
             image: train_images,
             annotation: train_annotations,
-            keep_probability: 0.85}
+            keep_probability: 0.5}
 
         # 6.2 training
         sess.run(train_op, feed_dict=feed_dict)
 
         if itr % 10 == 0:
-            train_loss, summary_str, predict = sess.run(
-                [loss, summary_op, pred_annotation], feed_dict=feed_dict)
+            train_loss, summary_str = sess.run(
+                [loss, summary_op], feed_dict=feed_dict)
 
             summary_writer.add_summary(summary_str, itr)
-            cross_mats = list()
-            predict = np.squeeze(predict)
-            train_annotations = np.squeeze(train_annotations)
-            for itr2 in range(FLAGS.batch_size):
-
-                crossMat = EvalMetrics.calculate_confusion_matrix(
-                train_annotations[itr2].astype(
-                    np.uint8), predict[itr2].astype(
-                    np.uint8), 23)
-                cross_mats.append(crossMat)
-            total_cm = np.sum(cross_mats, axis=0)
-            pixel_accuracy_, tra_acc, tra_IoU, meanFrqWIoU = EvalMetrics.calculate_eval_metrics_from_confusion_matrix2(total_cm, 23)
-            print("Step: %d, Train_loss:%g, Train_mean_accuracy:%g, Train_meanIoU:%g" % (itr, train_loss, tra_acc, tra_IoU))
-        if itr % display_step == 0 and itr != 0:
+            print("Step: %d, Train_loss:%g" % (itr, train_loss))
+        if itr % display_step == 0:
             valid_images, valid_annotations = validation_dataset_reader.next_batch(
                 FLAGS.batch_size)
-            valid_loss, pre = sess.run(
-                [loss, pred_annotation],
+            valid_loss = sess.run(
+                loss,
                 feed_dict={
                     image: valid_images,
                     annotation: valid_annotations,
                     keep_probability: 1.0})
-            cross_mats2 = list()
-            pre = np.squeeze(pre)
-            valid_annotations = np.squeeze(valid_annotations)
-            for itr3 in range(FLAGS.batch_size):
 
-                crossMat = EvalMetrics.calculate_confusion_matrix(
-                valid_annotations[itr2].astype(
-                    np.uint8), pre[itr2].astype(
-                    np.uint8), 23)
-                cross_mats2.append(crossMat)
-            total_cm = np.sum(cross_mats2, axis=0)
-            pixel_accuracy_2, v_acc, v_IoU, meanFrqWIoU2 = EvalMetrics.calculate_eval_metrics_from_confusion_matrix2(total_cm, 23)
+
             now = time.time()
             print(
-                "It has been trained for %.2f seconds.---> Validation_loss: %g, Validation_mean_accuracy:%g, Validation_meanIoU:%g" %
-                (now - start, valid_loss, v_acc, v_IoU))
-            print()
+                "It has been trained for %.2f seconds.---> Validation_loss: %g" %
+                (now - start, valid_loss))
+
             global_step = sess.run(net['global_step'])
             lo.append(train_loss)
             valid.append(valid_loss)
             step.append(itr)
-            train_acc.append(tra_acc)
-            train_mean_IoU.append(tra_IoU)
-            val_acc.append(v_acc)
-            val_mean_IoU.append((v_IoU))
-            if (valid_loss / train_loss) > 3 or (tra_IoU / v_IoU) > 5:
-                if_end = 1
-            if v_IoU > max(val_mean_IoU):
-                saver.save(
-                    sess,
-                    FLAGS.logs_dir +
-                    "model.ckpt",
-                    global_step=global_step)
+
+            saver.save(
+                sess,
+                FLAGS.logs_dir +
+                "model.ckpt",
+                global_step=global_step)
 
             # print("valid", valid, "step", step)
             '''
@@ -316,7 +288,7 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
             '''
             try:
                 plt.clf()
-                plt.ylim(0, 1.5)
+                plt.ylim(0, 1)
                 plt.plot(np.array(step), np.array(lo))
                 plt.plot(np.array(step), np.array(valid))
                 plt.ylabel("Loss")
@@ -327,48 +299,16 @@ def mode_train(sess, FLAGS, net, train_dataset_reader, validation_dataset_reader
                 plt.savefig(FLAGS.logs_dir + "Training Loss + Validation Loss.jpg")
             except Exception as err:
                 print(err)
+
             try:
-                plt.clf()
-                plt.ylim(0, 1)
-                plt.plot(np.array(step), np.array(train_acc))
-                plt.plot(np.array(step), np.array(val_acc))
-                plt.ylabel("acc")
-                plt.xlabel("Step")
-                plt.title('train_acc + val_acc')
-                plt.legend(['train_acc', 'val_acc'],
-                           loc='upper right')
-                plt.savefig(FLAGS.logs_dir + "train_acc + val_acc.jpg")
+                np.savetxt(
+                    FLAGS.logs_dir +
+                    "training_steps.csv",
+                    np.c_[step, lo, valid],
+                    fmt='%4f',
+                    delimiter=',')
             except Exception as err:
                 print(err)
-            try:
-                plt.clf()
-                plt.ylim(0, 1)
-                plt.plot(np.array(step), np.array(train_mean_IoU))
-                plt.plot(np.array(step), np.array(val_mean_IoU))
-                plt.ylabel("IoU")
-                plt.xlabel("Step")
-                plt.title('train_mean_IoU + val_mean_IoU')
-                plt.legend(['train_mean_IoU', 'val_mean_IoU'],
-                           loc='upper right')
-                plt.savefig(FLAGS.logs_dir + "train_mean_IoU + val_mean_IoU.jpg")
-            except Exception as err:
-                print(err)
-            mode_view(sess, FLAGS, "./test/VisImage/", train_dataset_reader, logs_dataset_reader,
-                      logs_records,
-                      pred_annotation, image, annotation, keep_probability, logits, 23)
-
-
-
-
-    try:
-        np.savetxt(
-            FLAGS.logs_dir +
-            "training_steps.csv",
-            np.c_[step, lo, valid, train_acc, val_acc, train_mean_IoU, val_mean_IoU],
-            fmt='%4f',
-            delimiter=',')
-    except Exception as err:
-        print(err)
 
     end = time.time()
     print("Learning time:", end - start, "seconds")
@@ -836,7 +776,7 @@ def mode_test(sess, FLAGS, TEST_DIR, validation_dataset_reader, valid_records, p
     print("Testing time:", end - start, "seconds")
 
 
-def mode_view(sess, flags, save_dir, train_dataset_reader, test_dataset_reader, valid_records, pred_annotation, image, annotation, keep_probability, logits, num_classes):
+def mode_view(sess, flags, save_dir, test_dataset_reader, valid_records, pred_annotation, image, annotation, keep_probability, logits, num_classes):
 
     temp = 4
     if not os.path.exists(save_dir):
@@ -870,32 +810,34 @@ def mode_view(sess, flags, save_dir, train_dataset_reader, test_dataset_reader, 
 
             fig = plt.figure()
             # pos = 240 + 1
-            plt.subplot(3,1,1)
+            #plt.subplot(3,1,1)
             plt.imshow(logs_images[itr2].astype(np.uint8))
             plt.axis('off')
             plt.title('Original')
-
+            plt.savefig(save_dir + "原始" + "_image_" +
+                        str(itr1 * temp + itr2))
             #pos = 240 + 2
-            plt.subplot(3,1,2)
+            #plt.subplot(3,1,2)
             # plt.imshow(valid_annotations[itr2].astype(np.uint8), cmap=plt.get_cmap('nipy_spectral'))
             plt.imshow(logs_annotations[itr2].astype(
-                np.uint8), cmap=plt.get_cmap('nipy_spectral'))
+                np.uint8), cmap=ListedColormap(label_colors_10k), norm=clothnorm_10k)
             plt.axis('off')
             plt.title('Ground Truth')
-
+            plt.savefig(save_dir + "真实" + "_image_" +
+                        str(itr1 * temp + itr2))
             #pos = 240 + 3
-            plt.subplot(3,1,3)
+            #plt.subplot(3,1,3)
             # plt.imshow(pred[itr2].astype(np.uint8), cmap=plt.get_cmap('nipy_spectral'))
             plt.imshow(pred[itr2].astype(np.uint8),
-                       cmap=plt.get_cmap('nipy_spectral'))
+                       cmap=ListedColormap(label_colors_10k), norm=clothnorm_10k)
             plt.axis('off')
             plt.title('Prediction')
-            plt.savefig(save_dir + "epoch_" + str(train_dataset_reader.epochs_completed) + "_image_" +
+            plt.savefig(save_dir + "预测" + "_image_" +
                         str(itr1 * temp + itr2))
 
             plt.close('all')
             #print("Saved image: %d" % (itr1 * flags.batch_size + itr2))
-            print("epoch %d Saved image: %s" % (train_dataset_reader.epochs_completed, str(itr1 * temp + itr2)))
+            print("Saved image: %s" % str(itr1 * temp + itr2))
             # Save input, gt, pred, crf_pred, sum figures for this image
 
 
@@ -1048,6 +990,182 @@ def mode_new_test(sess, flags, save_dir, validation_dataset_reader, valid_record
             fmt='%4i',
             delimiter=',')
 
+        # print("\n>>> Prediction results (TF functions):")
+        # print("Pixel acc:", np.nanmean(tf_pixel_acc_list))
+        # print("mean IoU:", np.nanmean(tf_miou_list))
+
+        print("\n>>> Prediction results:")
+        EvalMetrics.calculate_eval_metrics_from_confusion_matrix(total_cm, num_classes)
+        '''
+        # Prediction with CRF
+        crf_total_cm = np.sum(crf_cross_mats, axis=0)
+        np.savetxt(
+            flags.logs_dir +
+            "CRF_Crossmatrix.csv",
+            crf_total_cm,
+            fmt='%4i',
+            delimiter=',')
+
+        print("\n")
+        print("\n>>> Prediction results (CRF):")
+        EvalMetrics.calculate_eval_metrics_from_confusion_matrix(crf_total_cm, num_classes)
+        '''
+    except Exception as err:
+        print(err)
+
+    end = time.time()
+    print("Testing time:", end - start, "seconds")
+def mode_new_test2(sess, flags, save_dir, validation_dataset_reader, valid_records, pred_annotation, image, annotation, keep_probability, logits, num_classes):
+    print(">>>>>>>>>>>>>>>>Test mode")
+    start = time.time()
+
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    validation_dataset_reader.reset_batch_offset(0)
+    probability = tf.nn.softmax(logits=logits, axis=3)
+
+    cross_mats = list()
+    crf_cross_mats = list()
+
+    # tf_pixel_acc_list = []
+    # tf_miou_list = []
+
+    # pixel_acc_op, pixel_acc_update_op = tf.metrics.accuracy(labels=annotation, predictions=pred_annotation)
+    # mean_iou_op, mean_iou_update_op = tf.metrics.mean_iou(labels=annotation, predictions=pred_annotation, num_classes=num_classes)
+
+    for itr1 in range(validation_dataset_reader.get_num_of_records() // flags.batch_size):
+
+        valid_images, valid_annotations = validation_dataset_reader.next_batch(
+            flags.batch_size)
+
+        predprob, pred = sess.run([probability, pred_annotation], feed_dict={image: valid_images, keep_probability: 1.0})
+
+        # tf measures
+        sess.run(tf.local_variables_initializer())
+        feed_dict = {image: valid_images, annotation: valid_annotations, keep_probability: 1.0}
+        # predprob, pred, _, __ = sess.run([probability, pred_annotation, pixel_acc_update_op, mean_iou_update_op], feed_dict=feed_dict)
+        # tf_pixel_acc, tf_miou = sess.run([pixel_acc_op, mean_iou_op], feed_dict=feed_dict)
+        # tf_pixel_acc_list.append(tf_pixel_acc)
+        # tf_miou_list.append(tf_miou)
+
+        np.set_printoptions(threshold=10)
+
+        pred = np.squeeze(pred)
+        predprob = np.squeeze(predprob)
+        valid_annotations = np.squeeze(valid_annotations)
+
+        for itr2 in range(flags.batch_size):
+            '''
+            fig = plt.figure()
+            pos = 240 + 1
+            plt.subplot(pos)
+            plt.imshow(valid_images[itr2].astype(np.uint8))
+            plt.axis('off')
+            plt.title('Original')
+
+            pos = 240 + 2
+            plt.subplot(pos)
+            # plt.imshow(valid_annotations[itr2].astype(np.uint8), cmap=plt.get_cmap('nipy_spectral'))
+            plt.imshow(valid_annotations[itr2].astype(
+                np.uint8), cmap=ListedColormap(label_colors_10k), norm=clothnorm_10k)
+            plt.axis('off')
+            plt.title('Ground Truth')
+
+            pos = 240 + 3
+            plt.subplot(pos)
+            # plt.imshow(pred[itr2].astype(np.uint8), cmap=plt.get_cmap('nipy_spectral'))
+            plt.imshow(pred[itr2].astype(np.uint8),
+                       cmap=ListedColormap(label_colors_10k), norm=clothnorm_10k)
+            plt.axis('off')
+            plt.title('Prediction')
+            plt.savefig(save_dir + "resultSum_" +
+                        str(itr1 * flags.batch_size + itr2))
+            '''
+            # Confusion matrix for this image prediction
+            crossMat = EvalMetrics.calculate_confusion_matrix(
+                valid_annotations[itr2].astype(
+                    np.uint8), pred[itr2].astype(
+                    np.uint8), num_classes)
+            cross_mats.append(crossMat)
+            '''
+            np.savetxt(save_dir +
+                       "Crossmatrix" +
+                       str(itr1 *
+                           flags.batch_size +
+                           itr2) +
+                       ".csv", crossMat, fmt='%4i', delimiter=',')
+            '''
+            # Save input, gt, pred, crf_pred, sum figures for this image
+
+            """ Generate CRF """
+            '''
+            # 1. run CRF
+            crfwithprobsoutput = denseCRF.crf_with_probs(
+                valid_images[itr2].astype(np.uint8), predprob[itr2], num_classes)
+
+            # 2. show result display
+            crfwithprobspred = crfwithprobsoutput.astype(np.uint8)
+
+            # -----------------------Save inp and masks----------------------
+            Utils.save_image(valid_images[itr2].astype(np.uint8), save_dir,
+                             name="inp_" + str(itr1 * flags.batch_size + itr2))
+            Utils.save_image(valid_annotations[itr2].astype(np.uint8), save_dir,
+                             name="gt_" + str(itr1 * flags.batch_size + itr2))
+            Utils.save_image(pred[itr2].astype(np.uint8),
+                             save_dir,
+                             name="pred_" + str(itr1 * flags.batch_size + itr2))
+            Utils.save_image(crfwithprobspred, save_dir,
+                             name="crf_" + str(itr1 * flags.batch_size + itr2))
+
+            # ----------------------Save visualized masks---------------------
+            Utils.save_visualized_image(valid_annotations[itr2].astype(np.uint8), save_dir,
+                                        image_name="gt_" + str(itr1 * flags.batch_size + itr2), n_classes=num_classes)
+            Utils.save_visualized_image(pred[itr2].astype(np.uint8),
+                                        save_dir,
+                                        image_name="pred_" + str(itr1 * flags.batch_size + itr2), n_classes=num_classes)
+            Utils.save_visualized_image(crfwithprobspred, save_dir, image_name="crf_" + str(
+                itr1 * flags.batch_size + itr2), n_classes=num_classes)
+
+            # --------------------------------------------------
+
+            # Confusion matrix for this image prediction with crf
+            prob_crf_crossMat = EvalMetrics.calculate_confusion_matrix(
+                valid_annotations[itr2].astype(
+                    np.uint8), crfwithprobsoutput.astype(
+                    np.uint8), num_classes)
+            crf_cross_mats.append(prob_crf_crossMat)
+
+            np.savetxt(save_dir +
+                       "prob_crf_Crossmatrix" +
+                       str(itr1 *
+                           flags.batch_size +
+                           itr2) +
+                       ".csv", prob_crf_crossMat, fmt='%4i', delimiter=',')
+
+            pos = 240 + 4
+            plt.subplot(pos)
+            # plt.imshow(crfwithprobsoutput.astype(np.uint8), cmap=plt.get_cmap('nipy_spectral'))
+            plt.imshow(crfwithprobsoutput.astype(np.uint8),
+                       cmap=ListedColormap(label_colors_10k), norm=clothnorm_10k)
+            plt.axis('off')
+            plt.title('Prediction + CRF')
+            '''
+
+
+            plt.close('all')
+            print("Saved image: %d" % (itr1 * flags.batch_size + itr2))
+
+    try:
+        total_cm = np.sum(cross_mats, axis=0)
+        '''
+        np.savetxt(
+            flags.logs_dir +
+            "Crossmatrix.csv",
+            total_cm,
+            fmt='%4i',
+            delimiter=',')
+        '''
         # print("\n>>> Prediction results (TF functions):")
         # print("Pixel acc:", np.nanmean(tf_pixel_acc_list))
         # print("mean IoU:", np.nanmean(tf_miou_list))

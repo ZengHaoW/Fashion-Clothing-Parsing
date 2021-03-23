@@ -63,9 +63,10 @@ class BatchDatset:
             image = np.array([image for i in range(3)])
         # 3. resize it
         if self.image_options.get("resize", False) and self.image_options["resize"]:
-            resize_size = int(self.image_options["resize_size"])
+            H = int(self.image_options["resize_size"][0])
+            W = int(self.image_options["resize_size"][1])
             resize_image = misc.imresize(
-                image, [resize_size, resize_size], interp='nearest')            # 使用最近邻插值法resize图片
+                image, [H, W], interp='nearest')            # 使用最近邻插值法resize图片
         else:
             resize_image = image
 

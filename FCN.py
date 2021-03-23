@@ -21,15 +21,15 @@ DATA_SET = "10k"
 
 FLAGS = tf.flags.FLAGS
 if DATA_SET == "10k":
-    tf.flags.DEFINE_integer("batch_size", "2", "batch size for training")
+    tf.flags.DEFINE_integer("batch_size", "40", "batch size for training")
     tf.flags.DEFINE_integer(
         "training_epochs",
-        "50",
+        "30",
         "number of epochs for training")
     tf.flags.DEFINE_string("logs_dir", "logs/FCN_10k/",
                            "path to logs directory")
     tf.flags.DEFINE_string(
-        "data_dir", "C:/Users/zx08x/Desktop/humanparsing/", "path to dataset")
+        "data_dir", "humanparsing/", "path to dataset")
 
 if DATA_SET == "CFPD":
     tf.flags.DEFINE_integer("batch_size", "31", "batch size for training")
@@ -55,7 +55,7 @@ if DATA_SET == "LIP":
 
 tf.flags.DEFINE_float(
     "learning_rate",
-    "1e-5",
+    "1e-4",
     "Learning rate for Adam Optimizer")
 tf.flags.DEFINE_string("model_dir", "Model_zoo/", "Path to vgg model mat")
 tf.flags.DEFINE_bool('debug', "False", "Debug mode: True/ False")

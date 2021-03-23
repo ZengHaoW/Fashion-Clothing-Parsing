@@ -48,7 +48,7 @@ def read_dataset(data_dir):
 
     logs_records = []
 
-    logsdir = "test/"
+    logsdir = "./test/"
     print("## logs dir:", logsdir)
     for filename in glob.glob(logsdir + '*.jpg'):  # assuming jpg files
         record = {'image': None, 'annotation': None, 'filename': None}
