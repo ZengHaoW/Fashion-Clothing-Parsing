@@ -6,7 +6,7 @@ import read_CFPD_data as ClothingParsing
 import read_LIP_data as HumanParsing
 import TensorflowUtils as Utils
 import function_definitions as fd
-
+from settings import *
 import tensorflow as tf
 
 # Hide the warning messages about CPU/GPU
@@ -29,7 +29,7 @@ if DATA_SET == "10k":
     tf.flags.DEFINE_string("logs_dir", "logs/UNet_10k/",
                            "path to logs directory")
     tf.flags.DEFINE_string(
-        "data_dir", "C:/Users/zx08x/Desktop/humanparsing/", "path to dataset")
+        "data_dir", dataset_dir, "path to dataset")
 
 if DATA_SET == "CFPD":
     tf.flags.DEFINE_integer("batch_size", "38", "batch size for training")
@@ -60,7 +60,7 @@ tf.flags.DEFINE_float(
 tf.flags.DEFINE_string("model_dir", "Model_zoo/", "Path to vgg model mat")
 tf.flags.DEFINE_bool('debug', "False", "Debug mode: True/ False")
 
-tf.flags.DEFINE_string('mode', "test", "Mode train/ test/ visualize")
+tf.flags.DEFINE_string('mode', "train", "Mode train/ test/ visualize")
 # tf.flags.DEFINE_string('mode', "test", "Mode train/ test/ visualize")
 # tf.flags.DEFINE_string('mode', "visualize", "Mode train/ test/ visualize")
 # tf.flags.DEFINE_string('mode', "predonly", "Mode train/ test/ visualize")
@@ -99,7 +99,7 @@ def unetinference(image, keep_prob):
         inputs = image
         teacher = tf.placeholder(
             tf.float32, [
-                None, H, W, NUM_OF_CLASSES])
+                None, IMAGE_HEIGHT, IMAGE_WIDTH, NUM_OF_CLASSES])
         is_training = True
 
         # 1, 1, 3
@@ -210,16 +210,16 @@ def main(argv=None):
         tf.float32,
         shape=(
             None,
-            H,
-            W,
+            IMAGE_HEIGHT,
+            IMAGE_WIDTH,
             3),
         name="input_image")
     annotation = tf.placeholder(
         tf.int32,
         shape=(
             None,
-            H,
-            W,
+            IMAGE_HEIGHT,
+            IMAGE_WIDTH,
             1),
         name="annotation")
     # global_step = tf.Variable(0, trainable=False, name='global_step')
@@ -284,7 +284,7 @@ def main(argv=None):
     train_dataset_reader = None
     validation_dataset_reader = None
     test_dataset_reader = None
-    image_options = {'resize': True, 'resize_size': [H, W]}
+    image_options = {'resize': True, 'resize_size': [IMAGE_HEIGHT, IMAGE_WIDTH]}
 
     if FLAGS.mode == 'train':
         train_dataset_reader = DataSetReader.BatchDatset("train", train_records, image_options)

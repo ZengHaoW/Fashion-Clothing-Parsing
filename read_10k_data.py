@@ -7,6 +7,7 @@ from six.moves import cPickle as pickle
 import random
 import numpy as np
 import os
+from settings import *
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
@@ -25,7 +26,7 @@ def read_dataset(data_dir):
     # 'filename': filename}
     training_records = []
 
-    traindir = "C:/Users/zx08x/Desktop/humanparsing/training/"
+    traindir = train_dir
 
     print("## Training dir:", traindir)
     for filename in glob.glob(traindir + '*.jpg'):  # assuming jpg files
@@ -36,7 +37,7 @@ def read_dataset(data_dir):
 
     validation_records = []
 
-    validationdir = "C:/Users/zx08x/Desktop/humanparsing/validation/"
+    validationdir = valid_dir
 
     print("## Validation dir:", validationdir)
     for filename in glob.glob(
@@ -60,7 +61,7 @@ def read_dataset(data_dir):
         #   "jpg", "png")
         logs_records.append(record)
     testing_records = []
-    testdir = "C:/Users/zx08x/Desktop/humanparsing/test/"
+    testdir = test_dir
     print("## Testing dir:", testdir)
     for filename in glob.glob(
             testdir + '*.jpg'):  # assuming jpg files
