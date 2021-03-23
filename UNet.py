@@ -77,9 +77,7 @@ if DATA_SET == "CFPD":
 if DATA_SET == "LIP":
     NUM_OF_CLASSES = 20  # human parsing # LIP
 
-IMAGE_SIZE = 224
-W = 224
-H = 224
+
 TEST_DIR = FLAGS.logs_dir + "TestImage/"
 VIS_DIR = FLAGS.logs_dir + "VisImage/"
 
